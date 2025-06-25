@@ -5,7 +5,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken';
 import mongoose from "mongoose";
-
+ 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
         const user = await User.findById(userId)
@@ -147,9 +147,9 @@ const logoutUser = asyncHandler(async (req, res) => {
    await User.findByIdAndUpdate(
         req.user._id,
         {
-        $set: {
-            refreshToken: undefined
-        }
+            $unset: {
+                refreshToken: 1
+            }
         },
         {
             new: true
@@ -170,7 +170,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 })
 
 const refreshAcessToken = asyncHandler(async (req, res) => {
-    const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
     if (!incomingRefreshToken) {
         throw new ApiError(401, "Unauthorized Request")
@@ -227,7 +227,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
         throw new ApiError(400,"Invalid old password")
     }
 
-    user.password = password
+    user.password = newPassword
     await user.save({validateBeforeSave: false})
 
     return res
@@ -348,7 +348,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         {
             $lookup:{
                 from: "subscribtions",
-                localfield: "_id",
+                localField: "_id",
                 foreignField: "subscriber",
                 as : "subscribedTo"
             }

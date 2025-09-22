@@ -7,59 +7,47 @@ import axios from "axios";
 const searchVideos = asyncHandler(async (req, res) => {
     const { query, pageToken } = req.query;
     const apiKey = process.env.YOUTUBE_API_KEY;
-    const cacheKey = `search:${query}:${pageToken || ''}`;
 
     if (!query) throw new ApiError(400, "Search query is required");
     if (!apiKey) throw new ApiError(500, "YouTube API key is not configured");
-
-    // --- Step 1: Check the cache first ---
-    const cachedData = await ApiCache.findOne({ query: cacheKey });
-    if (cachedData) {
-        console.log("Serving search results from CACHE");
-        return res.status(200).json(
-            new ApiResponse(200, cachedData.response, "YouTube search successful (from cache)")
-        );
-    }
-
-    // --- Step 2: If not in cache, call the API (Cache Miss) ---
-    console.log("Serving search results from API, UPDATING CACHE");
+    
     try {
         const searchApiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&key=${apiKey}&maxResults=12&type=video${pageToken ? `&pageToken=${pageToken}`: ''}`;
         const searchResponse = await axios.get(searchApiUrl);
-        
         const videoItems = searchResponse.data.items;
+
         if (videoItems.length === 0) {
             return res.status(200).json(new ApiResponse(200, { videos: [], nextPageToken: null }, "No videos found"));
         }
 
-        const videoIds = videoItems.map(item => item.id.videoId).join(',');
-        const detailsApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds}&key=${apiKey}`;
-        const detailsResponse = await axios.get(detailsApiUrl);
+        const videoIds = videoItems.map(item => item.id.videoId);
+        const channelIds = [...new Set(videoItems.map(item => item.snippet.channelId))];
 
-        const simplifiedResults = detailsResponse.data.items.map(item => ({
-            videoId: item.id,
+        const [detailsResponse, channelsResponse] = await Promise.all([
+            axios.get(`https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoIds.join(',')}&key=${apiKey}`),
+            axios.get(`https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelIds.join(',')}&key=${apiKey}`)
+        ]);
+
+        const videoStats = detailsResponse.data.items.reduce((acc, item) => ({ ...acc, [item.id]: item.statistics }), {});
+        const channelAvatars = channelsResponse.data.items.reduce((acc, item) => ({ ...acc, [item.id]: item.snippet.thumbnails.default.url }), {});
+
+        const simplifiedResults = videoItems.map(item => ({
+            videoId: item.id.videoId,
             title: item.snippet.title,
             thumbnail: item.snippet.thumbnails.high.url,
             channelTitle: item.snippet.channelTitle,
             publishedAt: item.snippet.publishedAt,
-            views: item.statistics.viewCount,
-            owner: { username: item.snippet.channelTitle, avatar: "" },
+            views: videoStats[item.id.videoId]?.viewCount || 0,
+            owner: { 
+                username: item.snippet.channelTitle, 
+                avatar: channelAvatars[item.snippet.channelId] || ""
+            },
         }));
 
         const responseData = { videos: simplifiedResults, nextPageToken: searchResponse.data.nextPageToken };
-
-        // --- Step 3: Save the new result to the cache ---
-        await ApiCache.findOneAndUpdate(
-            { query: cacheKey },
-            { response: responseData },
-            { upsert: true, new: true } // Creates a new doc if one doesn't exist
-        );
-
-        return res.status(200).json(
-            new ApiResponse(200, responseData, "YouTube search successful")
-        );
+        
+        return res.status(200).json(new ApiResponse(200, responseData, "YouTube search successful"));
     } catch (error) {
-        console.error("Error calling YouTube API:", error.response?.data?.error);
         throw new ApiError(500, "Failed to fetch data from YouTube");
     }
 });
@@ -138,7 +126,6 @@ const getYouTubeComments = asyncHandler(async (req, res) => {
         const response = await axios.get(apiUrl);
         const nextPageToken = response.data.nextPageToken;
         
-        // Simplify the complex YouTube response to match our internal comment structure
         const simplifiedComments = response.data.items.map(item => {
             const comment = item.snippet.topLevelComment.snippet;
             return {
@@ -152,10 +139,9 @@ const getYouTubeComments = asyncHandler(async (req, res) => {
             };
         });
 
-        // Mimic our aggregatePaginate structure
         const responseData = {
             docs: simplifiedComments,
-            pageInfo: response.data.pageInfo, 
+            pageInfo: response.data.pageInfo, // This contains the totalResults
             hasNextPage: !!nextPageToken,
             nextPageToken: nextPageToken,
         };
@@ -163,7 +149,7 @@ const getYouTubeComments = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200, responseData, "YouTube comments fetched"));
     } catch (error) {
         if (error.response?.data?.error?.errors[0]?.reason === 'commentsDisabled') {
-            return res.status(200).json(new ApiResponse(200, { docs: [] }, "Comments are disabled for this video"));
+            return res.status(200).json(new ApiResponse(200, { docs: [], pageInfo: { totalResults: 0 } }, "Comments are disabled"));
         }
         throw new ApiError(500, "Failed to fetch YouTube comments");
     }

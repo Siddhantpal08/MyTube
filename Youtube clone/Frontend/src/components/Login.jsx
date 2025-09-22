@@ -13,21 +13,20 @@ function Login() {
     const [error, setError] = useState(null);
 
     // This determines where to redirect after login
-    const from = location.state?.from?.pathname || "/";
+    //const from = location.state?.from?.pathname || "/";
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        setError(null);
         try {
             const response = await axiosClient.post('/users/login', { email, password });
             
-            const { user, accessToken } = response.data.data;
+            const { user, accessToken, refreshToken } = response.data.data;
 
             // Call the context login function
-            login(user, accessToken);
+            login(user, accessToken, refreshToken);
 
             // Navigate to the page the user was trying to access, or to the homepage
-            navigate(from, { replace: true }); 
+            navigate('/')
         } catch (err) {
             setError(err.response?.data?.message || "An error occurred.");
         }

@@ -127,50 +127,30 @@ const loginUser = asyncHandler(async (req, res) =>{
 
     const LoggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
-    const options = {
-        httpOnly: true,
-        secure: true,
 
-    }
-
-    return res.status(200).cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
-    .json(
+    return res.status(200).json(
         new ApiResponse(200, {
-            user:LoggedInUser,accessToken, refreshToken
+            user: LoggedInUser,
+            accessToken,
+            refreshToken // Sending refreshToken in the response body
         }, "User logged in successfully")
-    )
+    );
 
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
-   await User.findByIdAndUpdate(
+    await User.findByIdAndUpdate(
         req.user._id,
-        {
-            $unset: {
-                refreshToken: 1
-            }
-        },
-        {
-            new: true
-        }
-    )
+        { $unset: { refreshToken: 1 } },
+        { new: true }
+    );
 
-    const options = {
-        httpOnly: true,
-        secure: true,
-    }
-
-    return res
-    .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User logged out successfully"))
-
-})
+    // REMOVED: No longer clearing cookies
+    return res.status(200).json(new ApiResponse(200, {}, "User logged out successfully"));
+});
 
 const refreshAcessToken = asyncHandler(async (req, res) => {
-    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+    const incomingRefreshToken = req.body.refreshToken;
 
     if (!incomingRefreshToken) {
         throw new ApiError(401, "Unauthorized Request")
@@ -193,24 +173,14 @@ const refreshAcessToken = asyncHandler(async (req, res) => {
             throw new ApiError(401, "Refresh Token is expired or used")
         }
     
-        const options = {
-            httpOnly: true,
-            secure: true
-        }
-    
         const {accessToken , newRefreshToken} = await generateAccessAndRefreshTokens(user._id)
     
-        return res
-        .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
-        .json(
-            new ApiResponse(
-                200, 
-                {
-                    accessToken,refreshToken: newRefreshToken
-                }, "Access token generated successfully")
-        )
+        return res.status(200).json(
+            new ApiResponse(200, {
+                accessToken,
+                refreshToken: newRefreshToken
+            }, "Access token refreshed successfully")
+        );
     } catch (error) {
         throw new ApiError(401, error?.message || "Invalid refresh token")
     }
@@ -237,9 +207,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
 const getCurrentUser = asyncHandler(async(req, res ) => {
     return res
-    .status(200)
-    .json(200, req.user, "User data fetched successfully")
-})
+        .status(200)
+        .json(new ApiResponse(200, req.user, "User data fetched successfully"));
+});
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
     const { fullName , email} = req.body
@@ -399,56 +369,22 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 })
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-    const user = await User.aggregate([
-        {
-            $match: {
-                _id: new mongoose.Types.ObjectId(req.user._id)
-            }
-        },
-        {
-            $lookup: {
-                from: "videos",
-                localField: "watchHistory",
-                foreignField: "_id",
-                as: "watchHistory",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "owner",
-                            foreignField: "_id",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project:{
-                                        fullName: 1,
-                                        username: 1,
-                                        avatar: 1
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        $addFields:{
-                            owner: {
-                                $first: "$owner"
-                            }
-                        }
-                    }
-                ]
-            }
+    const userWithHistory = await User.findById(req.user._id).populate({
+        path: 'watchHistory',
+        populate: {
+            path: 'owner',
+            select: 'username avatar'
         }
-    ])
+    });
+
+    if (!userWithHistory) {
+        throw new ApiError(404, "User not found");
+    }
 
     return res
-    .status(200)
-    .json(new ApiResponse(
-        200, 
-        user[0].watchHistory, 
-        "Watch History fetched Successfully"
-    ))
-})
+        .status(200)
+        .json(new ApiResponse(200, userWithHistory.watchHistory, "Watch history fetched successfully"));
+});
 
 
 export { 

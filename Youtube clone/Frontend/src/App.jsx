@@ -7,6 +7,8 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import ScrollToTopButton from './components/ScrollToTopButton'; 
 
+import Sidebar from './components/Sidebar';
+
 function App() {
     const { loading } = useAuth();
 
@@ -18,19 +20,16 @@ function App() {
         );
     }
 
-    // This is the SINGLE place where Header and Footer should exist.
     return (
-        <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-            <Toaster position="top-right" toastOptions={{ style: { background: '#333', color: '#fff' } }} />
-            
+        <div className="min-h-screen bg-gray-900 text-white flex flex-col overflow-x-hidden">
+            <Toaster /* ... */ />
             <Header />
-
-            <main className="container mx-auto p-4 flex-grow">
-                <Outlet /> {/* Your pages (HomePage, WatchPage, etc.) render here */}
-            </main>
-
-            <Footer />
-            <ScrollToTopButton />
+            <div className="flex flex-1 container mx-auto">
+                <Sidebar />
+                <main className="flex-grow p-4">
+                    <Outlet />
+                </main>
+            </div>
         </div>
     );
 }

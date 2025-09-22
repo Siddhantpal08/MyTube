@@ -1,7 +1,7 @@
 // src/components/Header.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../Context/AuthContext';
 
 // --- A small, reusable Icon component ---
 const Icon = ({ path, className = "w-6 h-6" }) => (
@@ -49,28 +49,14 @@ function Header() {
     return (
         <header className="bg-gray-900/80 text-white shadow-lg sticky top-0 z-50 backdrop-blur-sm">
             <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
-                {/* --- Logo --- */}
-                <Link to="/" className="text-2xl font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
-                    MyTube
-                </Link>
-
+                <Link to="/" className="text-2xl font-bold text-indigo-400 hover:text-indigo-300">MyTube</Link>
+                
                 {/* --- Search Bar (Desktop) --- */}
                 <div className="hidden md:block w-1/3">
-                    <form onSubmit={handleSearch} className="flex">
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search..."
-                            className="w-full px-4 py-2 text-gray-900 bg-gray-200 rounded-l-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                        <button type="submit" className="bg-gray-700 hover:bg-gray-600 text-white font-bold p-2 rounded-r-full">
-                            <Icon path="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                        </button>
-                    </form>
+                    {/* ... your search form ... */}
                 </div>
 
-                {/* --- Navigation Links & User Menu (Desktop) --- */}
+                {/* --- User Menu (Desktop) --- */}
                 <div className="hidden md:flex items-center space-x-4">
                     {isAuthenticated ? (
                         <div className="relative" ref={dropdownRef}>
@@ -81,9 +67,11 @@ function Header() {
                                 <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1">
                                     <div className="px-4 py-2 text-sm text-indigo-400">{user?.username}</div>
                                     <div className="border-t border-gray-700"></div>
-                                    <Link to="/subscription" className="block px-4 py-2 text-sm hover:bg-gray-700">Subscriptions</Link>
-                                    <Link to="/playlists" className="block px-4 py-2 text-sm hover:bg-gray-700">My Playlists</Link>
+                                    
+                                    {/* UPDATED LINKS */}
+                                    <Link to="/community" className="block px-4 py-2 text-sm hover:bg-gray-700">Community Feed</Link>
                                     <Link to="/creator/dashboard" className="block px-4 py-2 text-sm hover:bg-gray-700">Studio</Link>
+
                                     <div className="border-t border-gray-700"></div>
                                     <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-red-400 hover:bg-gray-700">Logout</button>
                                 </div>

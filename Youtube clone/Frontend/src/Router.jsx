@@ -14,6 +14,9 @@ import PlaylistPage from './components/PlaylistPage.jsx';
 import PlaylistDetailPage from './components/PlaylistDetailedPage.jsx';
 import CreatorDashboard from './components/CreatorDashboard.jsx';
 import SubscriptionsPage from './components/SubscriptionsPage.jsx';
+import HistoryPage from './components/HistoryPage.jsx';
+import CommunityPage from './components/CommunityPage.jsx';
+import AddTweetPage from './components/AddTweetPage.jsx';
 
 const router = createBrowserRouter([
     {
@@ -46,6 +49,23 @@ const router = createBrowserRouter([
                     </ProtectedRoute>
                 ),
             },
+            { 
+                path: '/history', // <-- ADDED
+                element: <ProtectedRoute><HistoryPage /></ProtectedRoute> 
+            },
+            { 
+                path: '/community', // <-- ADDED
+                element: <ProtectedRoute><CommunityPage /></ProtectedRoute> 
+            },
+            { 
+                path: '/channel/:userId/community',
+                element: <CommunityPage /> 
+            }, 
+            { 
+                path: '/add-tweet', 
+                element: <ProtectedRoute><AddTweetPage /></ProtectedRoute> 
+            },
+
         ],
     },
 ]);

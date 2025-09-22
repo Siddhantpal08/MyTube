@@ -3,22 +3,26 @@ import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
 import { formatCompactNumber, placeholderAvatar, timeSince } from '../utils/formatters';
+import ConfirmationModal from './ConfirmationModel';
+
 
 const CommentCard = ({ comment, isExternal, onCommentDeleted, onCommentUpdated }) => {
     const { user } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(comment.content);
     const isOwner = user?._id === comment.owner?._id;
+    const [showDeleteModal, setShowDeleteModal] = useState(false); // <-- State for the modal
+
 
     const handleDelete = async () => {
-        if (!window.confirm("Are you sure?")) return;
         try {
             await axiosClient.delete(`/comments/c/${comment._id}`);
             toast.success("Comment deleted");
             onCommentDeleted(comment._id);
-        } catch (err) {
+        } catch (error) {
             toast.error("Failed to delete comment.");
-            console.error(err);
+        } finally {
+            setShowDeleteModal(false); // Close the modal
         }
     };
 
@@ -36,7 +40,14 @@ const CommentCard = ({ comment, isExternal, onCommentDeleted, onCommentUpdated }
     };
 
     return (
-        <div className="flex items-start space-x-4">
+        <>
+        {showDeleteModal && 
+            <ConfirmationModal title="Delete Comment"
+            message="Are you sure you want to permanently delete this comment?" // <-- This was missing
+            onConfirm={handleDelete}
+            onCancel={() => setShowDeleteModal(false)} />}
+            
+            <div className="flex items-start space-x-4">
             <img src={comment.owner?.avatar || placeholderAvatar} alt={comment.owner?.username} className="w-10 h-10 rounded-full bg-gray-700" />
             <div className="w-full">
                 <div className="flex items-center space-x-2">
@@ -57,11 +68,12 @@ const CommentCard = ({ comment, isExternal, onCommentDeleted, onCommentUpdated }
                 {!isExternal && isOwner && !isEditing && (
                     <div className="flex gap-4 mt-2">
                         <button onClick={() => setIsEditing(true)} className="text-xs text-indigo-400 font-semibold">Edit</button>
-                        <button onClick={handleDelete} className="text-xs text-red-400 font-semibold">Delete</button>
+                        <button onClick={() => setShowDeleteModal(true)} className="text-xs text-red-400 font-semibold">Delete</button>
                     </div>
                 )}
             </div>
         </div>
+        </>
     );
 };
 
@@ -116,7 +128,7 @@ function CommentsSection({ videoId, isExternal }) {
     }, [videoId, isExternal]);
 
     useEffect(() => {
-        fetchComments();
+        fetchComments(); // This matches the function defined below
     }, [fetchComments]);
 
     const handleLoadMore = async () => {
@@ -192,16 +204,15 @@ function CommentsSection({ videoId, isExternal }) {
                     </div>
                 </div>
             )}
-
             {(hasMoreInternal || hasMoreYoutube) && (
-                 <div className="text-center mt-6">
-                    <button onClick={handleLoadMore} disabled={loadingMore} className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded disabled:opacity-50">
-                        {loadingMore ? 'Loading...' : 'Load More'}
-                    </button>
-                </div>
+               <div className="text-center mt-6">
+                   <button onClick={handleLoadMore} disabled={loadingMore} className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded disabled:opacity-50">
+                       {loadingMore ? 'Loading...' : 'Load More'}
+                   </button>
+               </div>
             )}
-        </div>
-    );
+        </div>  
+);
 }
 
 export default CommentsSection;

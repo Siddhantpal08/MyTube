@@ -31,14 +31,15 @@
                 });
         }, []); // <-- The empty dependency array is the key fix
 
-        const login = (userData, accessToken) => {
+        const login = (userData, accessToken, refreshToken) => {
             localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken); // <-- Store the refresh token
             setUser(userData);
         };
 
         const logout = () => {
             localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('refreshToken'); // <-- Remove the refresh token
             setUser(null);
         };
 

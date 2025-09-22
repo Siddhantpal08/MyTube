@@ -1,0 +1,10 @@
+services:
+  # This defines your backend web service
+  - type: web
+    name: mytube-backend
+    env: node
+    # This is the crucial line that tells Render where your code is
+    rootDir: Backend
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    plan: free # Specifies the free instance type 

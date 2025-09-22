@@ -4,6 +4,13 @@ import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 
+const getInternalCommentsForYoutubeVideo = asyncHandler(async (req, res) => {
+    const { youtubeVideoId } = req.params;
+    // Find comments that match the external YouTube video ID
+    const comments = await Comment.find({ youtubeVideoId }).populate("owner", "username avatar");
+    return res.status(200).json(new ApiResponse(200, { docs: comments, totalDocs: comments.length }, "Comments fetched"));
+});
+
 const getVideoComments = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { page = 1, limit = 10 } = req.query;
@@ -52,28 +59,27 @@ const getVideoComments = asyncHandler(async (req, res) => {
 });
 
 const addComment = asyncHandler(async (req, res) => {
-    console.log("👉 req.params:", req.params);
-    console.log("👉 req.body:", req.body);
-    console.log("👉 req.user:", req.user);
-    // TODO: add a comment to a video
     const { videoId } = req.params;
-    const { content } = req.body;
+    const { content, isExternal } = req.body; // Frontend will now tell us if the video is external
 
-    if (!content || !videoId) {
-        throw new ApiError(400, "Video ID and content are required");
+    if (!content) throw new ApiError(400, "Content is required");
+
+    const commentData = {
+        content,
+        owner: req.user._id
+    };
+
+    if (isExternal) {
+        commentData.youtubeVideoId = videoId;
+    } else {
+        commentData.video = videoId;
     }
 
-    const comment = await Comment.create({
-        video: videoId,
-        owner: req.user._id,
-        content
-    });
+    const comment = await Comment.create(commentData);
+    const createdComment = await Comment.findById(comment._id).populate("owner", "username avatar");
 
-    res.status(201).json(
-        new ApiResponse(201, comment, "Comment added successfully")
-    );
-
-})
+    return res.status(201).json(new ApiResponse(201, createdComment, "Comment added"));
+});
 
 const updateComment = asyncHandler(async (req, res) => {
     // TODO: update a comment
@@ -125,9 +131,11 @@ const deleteComment = asyncHandler(async (req, res) => {
     );
 })
 
+
 export {
     getVideoComments, 
     addComment, 
     updateComment,
-    deleteComment
+    deleteComment,
+    getInternalCommentsForYoutubeVideo  
     }

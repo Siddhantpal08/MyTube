@@ -1,4 +1,3 @@
-// src/components/HomePage.jsx
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from './VideoCard';
@@ -11,14 +10,24 @@ function HomePage() {
     const [hasMore, setHasMore] = useState(true);
     const [error, setError] = useState(null);
 
-    const fetchVideos = async () => {
+    const fetchInitialVideos = async () => {
         try {
             const response = await axiosClient.get('/youtube/search?query=latest+trailers');
+            
+            // --- DEBUGGING STEP ---
+            // 1. Open your browser console.
+            // 2. Look for "HOMEPAGE API RESPONSE" and expand the object to see its structure.
+            console.log("HOMEPAGE API RESPONSE:", response.data);
+            
+            // 3. Adjust the line below to match the path to your array of videos.
+            // Based on our backend, it should be `response.data.data.videos`.
             setVideos(response.data.data.videos || []);
             setPageToken(response.data.data.nextPageToken);
             setHasMore(!!response.data.data.nextPageToken);
+            
         } catch (err) {
-            setError("Failed to fetch videos.");
+            setError("Failed to fetch videos. Check your backend API key and quota.");
+            console.error(err);
         }
     };
 
@@ -31,7 +40,6 @@ function HomePage() {
             const response = await axiosClient.get(`/youtube/search?query=latest+trailers&pageToken=${pageToken}`);
             const newVideos = response.data.data.videos || [];
             
-            // This is the new, robust logic
             setVideos(prevVideos => {
                 const existingIds = new Set(prevVideos.map(v => v.videoId));
                 const uniqueNewVideos = newVideos.filter(v => !existingIds.has(v.videoId));
@@ -47,12 +55,11 @@ function HomePage() {
     };
 
     useEffect(() => {
-        fetchVideos();
+        fetchInitialVideos();
     }, []);
 
     if (error) return <div className="text-center text-red-500 p-8">{error}</div>;
 
-    // Show skeleton cards on initial load
     if (videos.length === 0 && hasMore) {
         return (
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -71,7 +78,7 @@ function HomePage() {
                     {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
                 </div>
             }
-            endMessage={<p className="text-center text-gray-500 mt-8"><b>You've seen it all!</b></p>}
+            endMessage={<p className="text-center text-gray-500 my-8"><b>You've seen it all!</b></p>}
         >
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {videos.map((video) => (

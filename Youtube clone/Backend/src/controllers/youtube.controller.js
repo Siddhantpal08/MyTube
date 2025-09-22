@@ -155,6 +155,7 @@ const getYouTubeComments = asyncHandler(async (req, res) => {
         // Mimic our aggregatePaginate structure
         const responseData = {
             docs: simplifiedComments,
+            pageInfo: response.data.pageInfo, 
             hasNextPage: !!nextPageToken,
             nextPageToken: nextPageToken,
         };

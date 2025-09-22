@@ -1,7 +1,7 @@
 // src/App.jsx
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './Context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import Footer from './components/Footer';

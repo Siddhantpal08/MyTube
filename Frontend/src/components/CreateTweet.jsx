@@ -1,6 +1,6 @@
 // src/components/CreateTweet.jsx
 import React, { useState } from 'react';
-import axiosClient from '../api/axiosClient';
+import axiosClient from '../Api/axiosClient';
 
 function CreateTweet({ onTweetCreated }) {
     const [content, setContent] = useState('');

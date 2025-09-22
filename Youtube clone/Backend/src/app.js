@@ -1,9 +1,6 @@
 import express from 'express';
 import cors from "cors";
 import cookieParser from 'cookie-parser';
-// In your backend's app.js file
-
-
 
 const app = express();
 
@@ -29,7 +26,7 @@ import commentRouter from "./routes/comment.routes.js"
 import likeRouter from "./routes/like.routes.js"
 import playlistRouter from "./routes/playlist.routes.js"
 import dashboardRouter from "./routes/dashboard.routes.js"
-import youtubeRouter from './routes/youtube.route.js';
+import youtubeRouter from './routes/youtube.routes.js';
 
 //routes declaration
 app.use("/api/v1/healthcheck", healthcheckRouter)

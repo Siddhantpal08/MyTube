@@ -13,6 +13,7 @@ import RegisterPage from './components/Register.jsx';
 import PlaylistPage from './components/PlaylistPage.jsx';
 import PlaylistDetailPage from './components/PlaylistDetailedPage.jsx';
 import CreatorDashboard from './components/CreatorDashboard.jsx';
+import SubscriptionsPage from './components/SubscriptionsPage.jsx';
 
 const router = createBrowserRouter([
     {
@@ -36,6 +37,14 @@ const router = createBrowserRouter([
             { 
                 path: '/creator/dashboard', 
                 element: <ProtectedRoute><CreatorDashboard /></ProtectedRoute> 
+            },
+            { 
+                path: '/subscription', // <-- ADD THIS NEW ROUTE
+                element: (
+                    <ProtectedRoute>
+                        <SubscriptionsPage />
+                    </ProtectedRoute>
+                ),
             },
         ],
     },

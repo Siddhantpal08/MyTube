@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import SaveToPlaylistModal from './SaveToPlaylistModal';
+import CommentsSection from './CommentSection';
 import ReactPlayer from 'react-player'; // Use the main import
 
 // --- Helper Functions & Components (defined outside for performance) ---
@@ -100,6 +101,7 @@ function WatchPage() {
         } catch (error) {
             setIsSubscribed(!newSubscribedState);
             setSubscribersCount(p => !newSubscribedState ? p + 1 : p - 1);
+            console.log(error)
         }
     };
     
@@ -113,6 +115,7 @@ function WatchPage() {
         } catch (error) {
             setIsLiked(!newLikedState);
             setLikesCount(p => !newLikedState ? p + 1 : p - 1);
+            console.log(error)
         }
     };
 
@@ -185,6 +188,9 @@ function WatchPage() {
                             {isDescriptionExpanded ? 'Show less' : 'Show more'}
                         </button>
                     </div>
+
+                    {!isExternalVideo && <CommentsSection videoId={videoId} isExternal={false} />}
+                    {isExternalVideo && <CommentsSection videoId={videoId} isExternal={true} />}
                 </div>
 
                 {/* --- "Up Next" Sidebar --- */}

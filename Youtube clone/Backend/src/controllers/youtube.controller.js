@@ -124,4 +124,48 @@ const getVideoDetails = asyncHandler(async (req, res) => {
     }
 });
 
-export { searchVideos, getVideoDetails };
+
+const getYouTubeComments = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const { pageToken } = req.query;
+    const apiKey = process.env.YOUTUBE_API_KEY;
+
+    if (!videoId) throw new ApiError(400, "Video ID is required");
+
+    const apiUrl = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&key=${apiKey}&maxResults=20${pageToken ? `&pageToken=${pageToken}` : ''}`;
+
+    try {
+        const response = await axios.get(apiUrl);
+        const nextPageToken = response.data.nextPageToken;
+        
+        // Simplify the complex YouTube response to match our internal comment structure
+        const simplifiedComments = response.data.items.map(item => {
+            const comment = item.snippet.topLevelComment.snippet;
+            return {
+                _id: item.id,
+                content: comment.textDisplay,
+                owner: {
+                    username: comment.authorDisplayName,
+                    avatar: comment.authorProfileImageUrl
+                },
+                createdAt: comment.publishedAt,
+            };
+        });
+
+        // Mimic our aggregatePaginate structure
+        const responseData = {
+            docs: simplifiedComments,
+            hasNextPage: !!nextPageToken,
+            nextPageToken: nextPageToken,
+        };
+
+        return res.status(200).json(new ApiResponse(200, responseData, "YouTube comments fetched"));
+    } catch (error) {
+        if (error.response?.data?.error?.errors[0]?.reason === 'commentsDisabled') {
+            return res.status(200).json(new ApiResponse(200, { docs: [] }, "Comments are disabled for this video"));
+        }
+        throw new ApiError(500, "Failed to fetch YouTube comments");
+    }
+});
+
+export { searchVideos, getVideoDetails, getYouTubeComments };

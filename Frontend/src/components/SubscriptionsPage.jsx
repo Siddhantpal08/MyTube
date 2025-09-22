@@ -1,6 +1,6 @@
 // src/components/SubscriptionsPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import { Link } from 'react-router-dom';
 import SkeletonCard from './SkeletonCard'; // Reusing our skeleton loader

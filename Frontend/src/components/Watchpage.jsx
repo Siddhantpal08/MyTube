@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext'; // Corrected import path casing
 import axiosClient from '../Api/axiosClient'; // Corrected import path casing
-import SaveToPlaylistModal from './SaveToPlaylistModal';
+import SaveToPlaylistModal from './SavetoPlaylistModal';
 import CommentsSection from './CommentSection'; // Corrected to plural for consistency
 import ReactPlayer from 'react-player';
 import { formatCompactNumber, placeholderAvatar } from '../utils/formatters';

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
+import myTubeLogo from '../assets/mytube-logo.png';
 
 // --- A small, reusable Icon component ---
 const Icon = ({ path, className = "w-6 h-6" }) => (
@@ -49,8 +50,8 @@ function Header() {
     return (
         <header className="bg-gray-900/80 text-white shadow-lg sticky top-0 z-50 backdrop-blur-sm">
             <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
-                <Link to="/" className="text-2xl font-bold text-indigo-400 hover:text-indigo-300">MyTube</Link>
-                
+                <img src={myTubeLogo} alt="MyTube Logo" className="h-8 mr-2" /> {/* Adjust height as needed */}
+
                 {/* --- Search Bar (Desktop) --- */}
                 <form onSubmit={handleSearch} className="flex-1 max-w-md mx-4">
                     <div className="relative">

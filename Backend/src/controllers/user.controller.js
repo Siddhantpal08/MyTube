@@ -1,3 +1,4 @@
+// src/controllers/user.controller.js
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
@@ -5,7 +6,9 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken';
 import mongoose from "mongoose";
- 
+import crypto from 'crypto'; // Node.js built-in module for crypto operations
+import sendEmail from "../utils/mailer.js"; // You'll need to create this utility
+
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
         const user = await User.findById(userId)
@@ -23,24 +26,12 @@ const generateAccessAndRefreshTokens = async (userId) => {
 }
 
 const registerUser = asyncHandler(async (req, res) => {
-    // get user details from frontend
-    // validation - not empty
-    // check if user already exists - username. email
-    // check for images, check for avatar
-    // upload them to cloudinary, check avatar
-    // create user object - create entry in db
-    // remove password and refresh token field from response
-    // check for user creation
-    // return response
-
-
     const { fullName , username, email, password } = req.body;
-    // console.log("email: ", email);
 
     if (
         [fullName, email, username, password].some((field) =>
-            field.trim() === "")
-     ) {
+            field?.trim() === "") // Added optional chaining for safer trim
+       ) {
         throw new ApiError(400, "Please fill in all fields");
     }
 
@@ -52,11 +43,9 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(409, "Username or email already exists");
     }
     
-    const avatarLocalPath =  req.files?.avatar[0]?.path;
-    //const coverImageLocalPath = req.files?.coverImage[0]?.path;
-
+    const avatarLocalPath = req.files?.avatar?.[0]?.path; // Safely access
     let coverImageLocalPath;
-    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length >0){
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
         coverImageLocalPath = req.files.coverImage[0].path;
     }
 
@@ -65,17 +54,17 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    // IMPORTANT: If coverImageLocalPath is empty, uploadOnCloudinary should handle it
+    const coverImage = coverImageLocalPath ? await uploadOnCloudinary(coverImageLocalPath) : null;
 
-    if (!avatar) {
+    if (!avatar?.url) { // Check for avatar.url
         throw new ApiError(400, "Please upload an avatar, required field");
     }
-
 
     const user = await User.create({
         fullName,
         avatar: avatar.url,
-        coverImage: coverImage?.url || "",
+        coverImage: coverImage?.url || "", // Use optional chaining
         email,
         password,
         username: username.toLowerCase()
@@ -89,20 +78,15 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something went wrong while Registering the User");
     }
 
-    return res.status(201).json(
-        new ApiResponse(200, createdUser, "User Registered successfully")
-    )
+    // After successful registration, generate tokens and log in the user
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(createdUser._id);
 
+    return res.status(201).json(
+        new ApiResponse(200, { user: createdUser, accessToken, refreshToken }, "User Registered successfully")
+    )
 } )
 
 const loginUser = asyncHandler(async (req, res) =>{
-    // req body -> data
-    // usernmae or email
-    // find the user
-    // password check
-    // access and refresh token
-    // send cookie
-
     const {email, username, password} = req.body
 
     if (!username && !email) {
@@ -123,19 +107,19 @@ const loginUser = asyncHandler(async (req, res) =>{
         throw new ApiError(401, "Invalid user Credentials");
     }
 
-    const {accessToken , refreshToken} =  await generateAccessAndRefreshTokens(user._id)
+    const {accessToken , refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
     const LoggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
-
+    // Assuming you want to send the tokens in the response body as per frontend.
+    // If you plan to use cookies, this part would be different.
     return res.status(200).json(
         new ApiResponse(200, {
             user: LoggedInUser,
             accessToken,
-            refreshToken // Sending refreshToken in the response body
+            refreshToken
         }, "User logged in successfully")
     );
-
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
@@ -145,7 +129,6 @@ const logoutUser = asyncHandler(async (req, res) => {
         { new: true }
     );
 
-    // REMOVED: No longer clearing cookies
     return res.status(200).json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
@@ -156,7 +139,6 @@ const refreshAcessToken = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized Request")
     }
     
-
     try {
         const decodedToken = jwt.verify(
             incomingRefreshToken , 
@@ -173,32 +155,34 @@ const refreshAcessToken = asyncHandler(async (req, res) => {
             throw new ApiError(401, "Refresh Token is expired or used")
         }
     
-        const {accessToken , newRefreshToken} = await generateAccessAndRefreshTokens(user._id)
+        const {accessToken , refreshToken: newRefreshToken} = await generateAccessAndRefreshTokens(user._id) // FIX: get newRefreshToken
     
         return res.status(200).json(
             new ApiResponse(200, {
                 accessToken,
-                refreshToken: newRefreshToken
+                refreshToken: newRefreshToken // FIX: Return the new refresh token
             }, "Access token refreshed successfully")
         );
     } catch (error) {
         throw new ApiError(401, error?.message || "Invalid refresh token")
     }
-
 })
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
     const {oldPassword, newPassword} = req.body
 
     const user = await User.findById(req.user?._id)
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
     if (!isPasswordCorrect) {
         throw new ApiError(400,"Invalid old password")
     }
 
-    user.password = newPassword
-    await user.save({validateBeforeSave: false})
+    user.password = newPassword // Mongoose pre-save hook will hash it
+    await user.save({validateBeforeSave: false}) // Changed to false to avoid validation on all fields
 
     return res
     .status(200)
@@ -243,7 +227,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
 
-    if (!avatar.url) {
+    if (!avatar?.url) { // Check for avatar.url
         throw new ApiError(400, "Error while uploading on avatar")
     }
 
@@ -271,9 +255,10 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Please provide an Cover Image")
     }
 
-    const coverImage = await uploadOnCloudinary(avatarLocalPath)
+    // FIX: use coverImageLocalPath here, not avatarLocalPath
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath) 
 
-    if (!coverImage.url) {
+    if (!coverImage?.url) { // Check for coverImage.url
         throw new ApiError(400, "Error while uploading Cover Image")
     }
 
@@ -301,7 +286,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         throw new ApiError(400,"username is missing")
     }
 
-    const channel = await User.aggregate([
+    // Aggregate to fetch channel data, subscribers count
+    const channelAggregate = await User.aggregate([
         {
             $match: {
                 username: username?.toLowerCase()
@@ -309,7 +295,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         },
         {
             $lookup:{
-                from: "subscribtions",
+                from: "subscriptions", // Correct collection name (plural)
                 localField: "_id",
                 foreignField: "channel",
                 as: "subscribers"
@@ -317,7 +303,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         },
         {
             $lookup:{
-                from: "subscribtions",
+                from: "subscriptions", // Correct collection name (plural)
                 localField: "_id",
                 foreignField: "subscriber",
                 as : "subscribedTo"
@@ -333,9 +319,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 },
                 isSubscribed: {
                     $cond: {
-                        if: {
-                            $in: [ req.user?._id, "$subscribers.subscriber"]
-                        },
+                        if: req.user?._id ? { // FIX: Check if user is logged in
+                            $in: [ req.user._id, "$subscribers.subscriber"]
+                        } : false, // If not logged in, always false
                         then: true,
                         else: false
                     }
@@ -352,23 +338,28 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 avatar: 1,
                 coverImage: 1,
                 email: 1,
-
+                createdAt: 1 // good to include
             }
         }
     ])
 
-    if (!channel?.length) {
+    if (!channelAggregate?.length) { // Check length
         throw new ApiError(404, "Channel does not exists");
     }
 
     return res
     .status(200)
     .json(
-        new ApiResponse(200, channel[0], "User Channel fetched Succesfully")
+        new ApiResponse(200, channelAggregate[0], "User Channel fetched Succesfully")
     )
 })
 
 const getWatchHistory = asyncHandler(async (req, res) => {
+    // Ensure req.user._id exists before querying
+    if (!req.user?._id) {
+        throw new ApiError(401, "Unauthorized: Please log in to view watch history");
+    }
+
     const userWithHistory = await User.findById(req.user._id).populate({
         path: 'watchHistory',
         populate: {
@@ -386,6 +377,99 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, userWithHistory.watchHistory, "Watch history fetched successfully"));
 });
 
+const searchChannels = asyncHandler(async (req, res) => {
+    const { query } = req.query;
+
+    if (!query || query.trim() === "") {
+        throw new ApiError(400, "Search query is required");
+    }
+
+    const users = await User.find({
+        username: { $regex: query, $options: "i" } // Case-insensitive search
+    }).select("username fullName avatar"); // Only return necessary fields
+
+    return res.status(200).json(new ApiResponse(200, users, "Channels fetched successfully"));
+});
+
+
+// FORGOT PASSWORD AND RESET PASSWORD LOGIC
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new ApiError(400, "Email is required");
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        // For security, always send a generic message even if email not found
+        // to prevent email enumeration attacks.
+        return res.status(200).json(new ApiResponse(200, {}, "If an account with that email exists, a password reset link has been sent."));
+    }
+
+    // Generate reset token
+    const resetToken = user.generatePasswordResetToken(); // This method needs to be in your User model
+    await user.save({ validateBeforeSave: false }); // Save the token and expiry to the user
+
+    // Create reset URL
+    const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`; // Your frontend reset page
+    const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetURL} \n\n If you did not request this, please ignore this email and your password will remain unchanged.`;
+
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: 'MyTube Password Reset Token',
+            message
+        });
+
+        return res.status(200).json(new ApiResponse(200, {}, "Password reset link sent to your email!"));
+    } catch (error) {
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        throw new ApiError(500, "There was an error sending the email. Try again later!");
+    }
+});
+
+
+const resetPassword = asyncHandler(async (req, res) => {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+        throw new ApiError(400, "New password is required");
+    }
+    if (password.length < 8) { // Example: minimum password length
+        throw new ApiError(400, "Password must be at least 8 characters long");
+    }
+
+    // Hash the incoming token and find the user
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() } // Token must not be expired
+    });
+
+    if (!user) {
+        throw new ApiError(400, "Password reset token is invalid or has expired.");
+    }
+
+    // Set new password
+    user.password = password; // Mongoose pre-save hook will hash this
+    user.passwordResetToken = undefined; // Clear token
+    user.passwordResetExpires = undefined; // Clear expiry
+    await user.save(); // This will trigger the pre-save hook to hash the new password
+
+    // Log the user in directly (optional) or just send success
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+
+    return res.status(200).json(
+        new ApiResponse(200, { user, accessToken, refreshToken }, "Password reset successful. You are now logged in!")
+    );
+});
+
 
 export { 
     registerUser,
@@ -399,4 +483,7 @@ export {
     updateUserCoverImage,
     getUserChannelProfile,
     getWatchHistory,
+    searchChannels,
+    forgotPassword, // Export new controller
+    resetPassword,  // Export new controller
 };

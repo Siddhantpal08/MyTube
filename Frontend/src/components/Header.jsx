@@ -36,6 +36,13 @@ function Header() {
         setSearchQuery("");
     };
 
+    const handleChannelSearch = () => {
+        if (searchQuery.trim()) {
+            navigate(`/search-channels?query=${searchQuery}`); // This is for CHANNEL search
+            setSearchQuery('');
+        }
+    };
+
     // Close dropdown when clicking outside of it
     useEffect(() => {
         function handleClickOutside(event) {
@@ -53,20 +60,24 @@ function Header() {
                 <img src={myTubeLogo} alt="MyTube Logo" className="h-8 mr-2" /> {/* Adjust height as needed */}
 
                 {/* --- Search Bar (Desktop) --- */}
-                <form onSubmit={handleSearch} className="flex-1 max-w-md mx-4">
-                    <div className="relative">
+                <form onSubmit={handleSearch} className="flex-1 max-w-md mx-4 flex"> {/* Added flex here */}
+                    <div className="relative flex-grow"> {/* Added flex-grow here */}
                         <input
                             type="text"
                             placeholder="Search videos..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full p-2 pl-10 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-red-500"
+                            className="w-full p-2 pl-10 rounded-l-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-red-500"
                         />
                         <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            {/* Search Icon (e.g., using an SVG or Font Awesome) */}
+                            {/* Search Icon */}
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </button>
                     </div>
+                    {/* Optional: Add a button to search channels */}
+                    <button onClick={handleChannelSearch} className="bg-gray-600 hover:bg-gray-500 text-white py-2 px-4 rounded-r-lg ml-px">
+                        Channels
+                    </button>
                 </form>
 
                 {/* --- User Menu (Desktop) --- */}
@@ -84,6 +95,7 @@ function Header() {
                                     {/* UPDATED LINKS */}
                                     <Link to="/community" className="block px-4 py-2 text-sm hover:bg-gray-700">Community Feed</Link>
                                     <Link to="/creator/dashboard" className="block px-4 py-2 text-sm hover:bg-gray-700">Studio</Link>
+                                    <Link to="/my-videos" className="block px-4 py-2 text-sm hover:bg-gray-700">My Videos</Link>
 
                                     <div className="border-t border-gray-700"></div>
                                     <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-red-400 hover:bg-gray-700">Logout</button>

@@ -17,6 +17,10 @@ import SubscriptionsPage from './components/SubscriptionsPage.jsx';
 import HistoryPage from './components/HistoryPage.jsx';
 import CommunityPage from './components/CommunityPage.jsx';
 import AddTweetPage from './components/AddTweetPage.jsx';
+import MyVideosPage from './pages/MyVideosPage.jsx';
+import UploadVideoPage from './pages/UploadVideoPage.jsx';
+import ChannelSearchPage from './pages/ChannelSearchPage.jsx';
+import ChannelPage from './pages/ChannelPage.jsx';
 
 const router = createBrowserRouter([
     {
@@ -64,6 +68,18 @@ const router = createBrowserRouter([
             { 
                 path: '/add-tweet', 
                 element: <ProtectedRoute><AddTweetPage /></ProtectedRoute> 
+            },
+            { 
+                 path: '/my-videos', element: <ProtectedRoute><MyVideosPage /></ProtectedRoute> 
+            },
+            { 
+                path: '/upload-video', element: <ProtectedRoute><UploadVideoPage /></ProtectedRoute> 
+            },
+            { 
+                path: '/search-channels', element: <ChannelSearchPage /> 
+            },
+            { 
+                path: '/channel/:username', element: <ChannelPage /> 
             },
 
         ],

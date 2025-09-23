@@ -1,4 +1,3 @@
-// src/routes/user.routes.js
 import { Router } from 'express';
 import { 
     registerUser, 
@@ -13,15 +12,17 @@ import {
     getUserChannelProfile, 
     getWatchHistory, 
     searchChannels,
-    forgotPassword, // New
-    resetPassword,  // New
+    forgotPassword,
+    resetPassword
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js"; // Make sure verifyJWT is imported
+import { verifyJWT, verifyJWTAndSetUser } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// Public routes
+// --- PUBLIC ROUTES ---
+// These routes do not require a user to be logged in.
+
 router.route("/register").post(
     upload.fields([
         { name: "avatar", maxCount: 1 },
@@ -30,22 +31,19 @@ router.route("/register").post(
     registerUser
 );
 
-router.use(verifyJWT);
-
-router.route("/register").post( /* ... */ );
 router.route("/login").post(loginUser);
 router.route("/refresh-token").post(refreshAcessToken);
+router.route("/forgot-password").post(forgotPassword);
+router.route("/reset-password/:token").post(resetPassword);
 router.route("/search-channels").get(searchChannels);
-router.route("/forgot-password").post(forgotPassword); // New route
-router.route("/reset-password/:token").post(resetPassword); // New route
+
+// This route is public, but uses the flexible auth to see if the viewer is subscribed
+router.route("/c/:username").get(verifyJWTAndSetUser, getUserChannelProfile);
 
 
-
-// Make Channel Profile Public (moved here)
-router.route("/c/:username").get(getUserChannelProfile); // Now public
-
-// Authenticated routes (user must be logged in for all below this line)
-router.use(verifyJWT); // Apply verifyJWT middleware to all routes below this line
+// --- PROTECTED ROUTES ---
+// All routes below this line will require a valid access token.
+router.use(verifyJWT);
 
 router.route("/logout").post(logoutUser);
 router.route("/change-password").post(changeCurrentPassword);

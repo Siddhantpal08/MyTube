@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
-import VideoCard from '../components/VideoCard';
+import VideoCard from './VideoCard';
 import { Link } from 'react-router-dom';
 
 function MyVideosPage() {

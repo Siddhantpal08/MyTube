@@ -93,22 +93,13 @@ const deleteTweet = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Tweet deleted successfully"));
 });
 
-const getSubscribedChannelsTweets = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
-
-  // 1. Find all channels the user is subscribed to
-  const subscriptions = await Subscription.find({ subscriber: userId });
-  const channelIds = subscriptions.map(sub => sub.channel);
-  
-  // 2. FIXED: Also include the current user's own ID in the list
-  const allUserIds = [...channelIds, userId];
-
-  // 3. Find tweets from subscribed channels OR from the user themselves
-  const tweets = await Tweet.find({ owner: { $in: allUserIds } })
+const getAllTweets = asyncHandler(async (req, res) => {
+  // This query finds all tweets from all users
+  const tweets = await Tweet.find({})
       .populate("owner", "username avatar")
       .sort({ createdAt: -1 });
 
-  return res.status(200).json(new ApiResponse(200, tweets, "Feed fetched successfully"));
+  return res.status(200).json(new ApiResponse(200, tweets, "All tweets fetched successfully"));
 });
 
 
@@ -117,5 +108,5 @@ export {
     getUserTweets,
     updateTweet,
     deleteTweet,
-    getSubscribedChannelsTweets,
+    getAllTweets,
 }

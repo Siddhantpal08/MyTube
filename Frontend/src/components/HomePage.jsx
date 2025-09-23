@@ -13,14 +13,6 @@ function HomePage() {
     const fetchInitialVideos = async () => {
         try {
             const response = await axiosClient.get('/youtube/search?query=latest+trailers');
-            
-            // --- DEBUGGING STEP ---
-            // 1. Open your browser console.
-            // 2. Look for "HOMEPAGE API RESPONSE" and expand the object to see its structure.
-            console.log("HOMEPAGE API RESPONSE:", response.data);
-            
-            // 3. Adjust the line below to match the path to your array of videos.
-            // Based on our backend, it should be `response.data.data.videos`.
             setVideos(response.data.data.videos || []);
             setPageToken(response.data.data.nextPageToken);
             setHasMore(!!response.data.data.nextPageToken);

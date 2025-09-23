@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-    baseURL: 'http://localhost:8000/api/v1'
+    baseURL: 'https://mytube-8d30.onrender.com/api/v1'
     // REMOVED: withCredentials: true
 });
 

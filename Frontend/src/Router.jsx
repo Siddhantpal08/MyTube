@@ -17,10 +17,10 @@ import SubscriptionsPage from './components/SubscriptionsPage.jsx';
 import HistoryPage from './components/HistoryPage.jsx';
 import CommunityPage from './components/CommunityPage.jsx';
 import AddTweetPage from './components/AddTweetPage.jsx';
-import MyVideosPage from './pages/MyVideosPage.jsx';
-import UploadVideoPage from './pages/UploadVideoPage.jsx';
-import ChannelSearchPage from './pages/ChannelSearchPage.jsx';
-import ChannelPage from './pages/ChannelPage.jsx';
+import MyVideosPage from './components/MyVideosPage.jsx';
+import UploadVideoPage from './components/UploadVideoPage.jsx';
+import ChannelSearchPage from './components/ChannelSearchPage.jsx';
+import ChannelPage from './components/ChannelPage.jsx';
 
 const router = createBrowserRouter([
     {

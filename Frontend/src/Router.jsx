@@ -3,8 +3,6 @@ import React from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
-
-// Import all your page components
 import HomePage from './components/HomePage.jsx';
 import WatchPage from './components/Watchpage.jsx';
 import SearchResults from './components/SearchResults.jsx';

@@ -1,5 +1,11 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "Backend/src/index.js",
+      "use": "@vercel/node"
+    }
+  ],
   "routes": [
     {
       "src": "/api/v1/(.*)",
@@ -7,7 +13,6 @@
     },
     {
       "src": "/assets/(.*)",
-      "headers": { "cache-control": "s-maxage=31536000, immutable" },
       "dest": "/assets/$1"
     },
     {

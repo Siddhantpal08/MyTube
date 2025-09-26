@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // --- THIS IS THE CRITICAL FIX ---
 // We are hardcoding the live backend URL to ensure the frontend calls the correct server.
-const API_BASE_URL = 'https://mytube-8d30.onrender.com/api/v1';
+const API_BASE_URL = '/api/v1';
 
 
 const axiosClient = axios.create({

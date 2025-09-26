@@ -4,22 +4,22 @@
     {
       "src": "Backend/package.json",
       "use": "@vercel/node",
-      "config": { "includeFiles": ["src/**"] }
+      "config": {
+        "includeFiles": ["src/**"]
+      }
     },
     {
       "src": "Frontend/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/v1/(.*)",
       "dest": "Backend/src/index.js"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
     },
     {
       "src": "/(.*)",

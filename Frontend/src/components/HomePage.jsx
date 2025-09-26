@@ -44,7 +44,7 @@ function HomePage() {
                 
                 const newVideoRows = {};
                 responses.forEach((response, index) => {
-                    newVideoRows[categories[index]] = response.data.data.videos || [];
+                    newVideoRows[categories[index]] = response.data.data.items || [];
                 });
                 
                 setVideoRows(newVideoRows);

@@ -6,51 +6,51 @@ import axios from "axios";
 
 const searchVideos = asyncHandler(async (req, res) => {
     const { query, pageToken } = req.query;
-    const apiKey = process.env.YOUTUBE_API_KEY;
+    const apiKey = process.env.YOUTUBE_API_KEY; // Ensure this is the correct variable name
 
     if (!query) throw new ApiError(400, "Search query is required");
     if (!apiKey) throw new ApiError(500, "YouTube API key is not configured");
-    
+
     try {
-        const searchApiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&key=${apiKey}&maxResults=12&type=video${pageToken ? `&pageToken=${pageToken}`: ''}`;
-        const searchResponse = await axios.get(searchApiUrl);
-        const videoItems = searchResponse.data.items;
+        const searchApiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=12&type=video${pageToken ? `&pageToken=${pageToken}`: ''}`;
 
-        if (videoItems.length === 0) {
-            return res.status(200).json(new ApiResponse(200, { videos: [], nextPageToken: null }, "No videos found"));
-        }
+        // --- ADD THIS LOG TO SEE THE URL BEING CALLED ---
+        console.log("Attempting to call YouTube Search API with URL:", searchApiUrl);
 
-        const videoIds = videoItems.map(item => item.id.videoId);
-        const channelIds = [...new Set(videoItems.map(item => item.snippet.channelId))];
+        const searchResponse = await axios.get(searchApiUrl); // <--- This is where the error likely occurs
 
-        const [detailsResponse, channelsResponse] = await Promise.all([
-            axios.get(`https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoIds.join(',')}&key=${apiKey}`),
-            axios.get(`https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelIds.join(',')}&key=${apiKey}`)
-        ]);
+        // ... (rest of the success logic)
 
-        const videoStats = detailsResponse.data.items.reduce((acc, item) => ({ ...acc, [item.id]: item.statistics }), {});
-        const channelAvatars = channelsResponse.data.items.reduce((acc, item) => ({ ...acc, [item.id]: item.snippet.thumbnails.default.url }), {});
-
-        const simplifiedResults = videoItems.map(item => ({
-            videoId: item.id.videoId,
-            title: item.snippet.title,
-            thumbnail: item.snippet.thumbnails.high.url,
-            channelTitle: item.snippet.channelTitle,
-            publishedAt: item.snippet.publishedAt,
-            views: videoStats[item.id.videoId]?.viewCount || 0,
-            owner: { 
-                username: item.snippet.channelTitle, 
-                avatar: channelAvatars[item.snippet.channelId] || ""
-            },
-        }));
-
-        const responseData = { videos: simplifiedResults, nextPageToken: searchResponse.data.nextPageToken };
-        
-        return res.status(200).json(new ApiResponse(200, responseData, "YouTube search successful"));
     } catch (error) {
+        // --- CRITICAL DIAGNOSTIC LOGGING ---
+        console.error("\n--- DETAILED YOUTUBE API CALL ERROR ---");
+        console.error("Error Message:", error.message);
+        console.error("Error Name:", error.name);
+        console.error("Error Code:", error.code); // e.g., 'ERR_BAD_REQUEST', 'ERR_NETWORK' from axios perspective
+
+        if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx (e.g., 400, 403, 500 from Google)
+            console.error("YouTube API Response Status:", error.response.status);
+            console.error("YouTube API Response Data (Google's error):", error.response.data);
+            console.error("YouTube API Response Headers:", error.response.headers);
+        } else if (error.request) {
+            // The request was made but no response was received (e.g., timeout, network issue from Render)
+            console.error("No response received from YouTube API. Request details:", error.request);
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error("Error setting up YouTube API request:", error.config);
+        }
+        console.error("Full Error Object (if available):", error); // Logs the entire error object
+        console.error("--- END DETAILED YOUTUBE API CALL ERROR ---\n");
+
+        // --- Original error thrown by your code ---
         throw new ApiError(500, "Failed to fetch data from YouTube");
     }
 });
+
+// IMPORTANT: Repeat this detailed logging for getVideoDetails and getYouTubeComments
+// if those parts of your app are also causing issues.
 
 const getVideoDetails = asyncHandler(async (req, res) => {
     const { videoId } = req.params;

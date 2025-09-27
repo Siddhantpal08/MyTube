@@ -41,6 +41,7 @@ app.get("/", (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" type="image/svg+xml" href="../public/mytube-logo.png" />
         <title>MyTube API Status</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');

@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from './VideoCard'; // We'll create this next
 import SkeletonCard from './SkeletonCard'; // We'll create this next
+import { useApp } from '../Context/AppContext'; 
+
+
+const QuotaBanner = () => (
+    <div className="bg-red-800 border-l-4 border-red-500 text-white p-4 mb-6 rounded-r-lg" role="alert">
+        <p className="font-bold">API Limit Reached</p>
+        <p>The daily YouTube API quota has been exceeded. Public video data will not be available until tomorrow.</p>
+    </div>
+);
 
 // A reusable component for a single row of videos
 const VideoRow = ({ category, videos }) => (
@@ -45,14 +54,23 @@ function HomePage() {
                 
                 setVideoRows(newVideoRows);
             } catch (err) {
+                // 3. Check for the specific quota error
+                if (err.response && err.response.status === 429) {
+                    setYoutubeQuotaExhausted(true);
+                } else {
+                    setError("Failed to load content.");
+                }
                 console.error("Failed to fetch videos:", err);
-                setError("Failed to load content. Please check your connection and try again.");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchAllCategories();
+        if (!youtubeQuotaExhausted) { // Don't fetch if we already know the quota is out
+            fetchAllCategories();
+        } else {
+            setLoading(false);
+        }
     }, []);
 
     if (loading) {
@@ -76,6 +94,7 @@ function HomePage() {
 
     return (
         <div className="py-6">
+            {youtubeQuotaExhausted && <QuotaBanner />}
             {Object.entries(videoRows).map(([category, videos]) => (
                 videos.length > 0 && <VideoRow key={category} category={category} videos={videos} />
             ))}

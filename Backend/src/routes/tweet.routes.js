@@ -19,6 +19,7 @@ router.use(verifyJWT);
 
 // --- PROTECTED ROUTES ---
 router.route("/").post(createTweet);
+router.route("/feed").get(getSubscribedTweets);
 router.route("/user/:userId").get(getUserTweets);
 router.route("/:tweetId").patch(updateTweet).delete(deleteTweet);
 

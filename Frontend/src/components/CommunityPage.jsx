@@ -29,27 +29,36 @@ function CommunityPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // This logic determines the title and what to show when the feed is empty
+    const pageTitle = isAuthenticated ? "Your Feed" : "Community";
+    const emptyMessage = isAuthenticated 
+        ? "Posts from channels you subscribe to will appear here."
+        : "There are no posts yet. Login to see a personalized feed!";
+
     useEffect(() => {
         const fetchTweets = async () => {
             setLoading(true);
             setError(null);
+            
+            // If the user is logged in, fetch their personalized feed. Otherwise, fetch the public feed.
+            const endpoint = isAuthenticated ? '/tweets/feed' : '/tweets';
+            
             try {
-                // THE FIX: This endpoint fetches ALL tweets and is public.
-                const response = await axiosClient.get('/tweets');
+                const response = await axiosClient.get(endpoint);
                 setTweets(response.data?.data?.docs || []);
             } catch (err) {
                 console.error("Failed to fetch community posts:", err);
-                setError("Could not load the community feed. Please try again later.");
+                setError("Could not load the feed. Please try again later.");
             } finally {
                 setLoading(false);
             }
         };
 
         fetchTweets();
-    }, []);
+    }, [isAuthenticated]); // Re-fetch the feed if the user's login status changes
 
     if (loading) {
-        return <div className="text-center text-white p-8">Loading Community Feed...</div>;
+        return <div className="text-center text-white p-8">Loading Feed...</div>;
     }
 
     if (error) {
@@ -59,8 +68,7 @@ function CommunityPage() {
     return (
         <div className="max-w-3xl mx-auto">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">Community</h1>
-                {/* Only show the "Add Post" button if the user is logged in */}
+                <h1 className="text-3xl font-bold text-white">{pageTitle}</h1>
                 {isAuthenticated && (
                     <Link to="/add-tweet" className="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 transition-colors">
                         Add Post
@@ -73,8 +81,8 @@ function CommunityPage() {
                     tweets.map((tweet) => <TweetCard key={tweet._id} tweet={tweet} />)
                 ) : (
                     <div className="text-center text-gray-400 py-16 bg-gray-800 rounded-lg">
-                        <h2 className="text-xl font-semibold">The Community is Quiet</h2>
-                        <p className="mt-2 text-sm">There are no posts yet. If you're logged in, be the first to share something!</p>
+                        <h2 className="text-xl font-semibold">The feed is quiet</h2>
+                        <p className="mt-2 text-sm">{emptyMessage}</p>
                     </div>
                 )}
             </div>

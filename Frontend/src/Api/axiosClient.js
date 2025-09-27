@@ -1,8 +1,6 @@
 import axios from 'axios';
 
-// --- THIS IS THE CRITICAL FIX ---
-// We are hardcoding the live backend URL to ensure the frontend calls the correct server.
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = 'https://mytube-backend-production-4b33.up.railway.app/api/v1/api/v1';
 
 
 const axiosClient = axios.create({

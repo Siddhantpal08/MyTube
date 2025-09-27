@@ -1,21 +1,26 @@
-// src/components/ProtectedRoute.jsx
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { useLocation, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
 
 function ProtectedRoute({ children }) {
-    const { isAuthenticated } = useAuth();
-    const location = useLocation();
+    const { isAuthenticated, loading } = useAuth();
+    const location = useLocation(); // 1. Get the current location
 
-    // If the user is not authenticated, redirect them to the /login page
-    if (!isAuthenticated) {
-        // We also pass the original location they tried to visit.
-        // This allows us to redirect them back after they log in.
-        return <Navigate to="/login" state={{ from: location }} replace />;
+    // If the authentication state is still loading, you can show a loader
+    if (loading) {
+        return <div className="text-center p-8">Checking authentication...</div>;
     }
 
-    // If the user is authenticated, render the component they were trying to access
-    return children;
+    // 2. If the user is authenticated, render the child component they were trying to access.
+    // 'children' is the prop passed from your router (e.g., <PlaylistPage />).
+    if (isAuthenticated) {
+        return children || <Outlet />;
+    }
+
+    // 3. If the user is NOT authenticated, redirect them to the login page.
+    // We pass the current location in the 'state' object.
+    // The Login page can then use this state to redirect back after a successful login.
+    return <Navigate to="/login" state={{ from: location }} replace />;
 }
 
 export default ProtectedRoute;

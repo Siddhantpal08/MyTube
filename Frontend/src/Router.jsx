@@ -7,7 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 // --- Page Components ---
 import HomePage from './components/HomePage.jsx';
-import ExplorePage from './components/ExplorePage.jsx';
+import ExplorePage from './components/Explore.jsx';
 import WatchPage from './components/Watchpage.jsx';
 import SearchResults from './components/SearchResults.jsx';
 import LoginPage from './components/Login.jsx';

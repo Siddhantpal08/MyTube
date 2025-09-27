@@ -28,6 +28,7 @@ function HomePage() {
     const [videoRows, setVideoRows] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const { youtubeQuotaExhausted, setYoutubeQuotaExhausted } = useApp();
 
     const categories = [
         "Latest Movie Trailers",

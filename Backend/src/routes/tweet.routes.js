@@ -1,21 +1,25 @@
 import { Router } from 'express';
 import {
     createTweet,
-    deleteTweet,
     getUserTweets,
     updateTweet,
-    getAllTweets,
-} from "../controllers/tweet.controller.js"
-import {verifyJWT} from "../middlewares/auth.middleware.js"
+    deleteTweet,
+    getAllTweets
+} from "../controllers/tweet.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.route("/").get(getAllTweets); 
+// This route is now PUBLIC. It fetches all tweets for the community page.
+router.route("/").get(getAllTweets);
 
-router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
+// This middleware protects all routes defined BELOW it.
+// Any route defined above it remains public.
+router.use(verifyJWT);
 
+// --- PROTECTED ROUTES ---
 router.route("/").post(createTweet);
 router.route("/user/:userId").get(getUserTweets);
 router.route("/:tweetId").patch(updateTweet).delete(deleteTweet);
 
-export default router
+export default router;

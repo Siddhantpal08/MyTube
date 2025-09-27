@@ -1,25 +1,37 @@
 import express from 'express';
 import cors from "cors";
 import cookieParser from 'cookie-parser';
-import connectDB from './db/index.js'; // Import your DB connection function
-
-// --- CONNECT TO DATABASE ---
-// This will establish the database connection when the serverless function starts.
-connectDB();
-// -------------------------
+import path from 'path'; // <-- 1. Import the 'path' module
+import { fileURLToPath } from 'url'; // <-- 2. Import 'fileURLToPath'
 
 const app = express();
+
+// --- Setup for __dirname in ES Modules ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(cors({
     origin: process.env.CORS_ORIGIN, // Make sure this is set to your Vercel frontend URL in the dashboard
     credentials: true
 }))
 
+
+// --- 3. Serve Static Files Correctly ---
+// This tells Express to serve everything in the 'public' folder.
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+
 // Middleware setup remains the same
 app.use(express.json({limit: "16kb"}))
 app.use(express.urlencoded({extended: true, limit: "16kb"}))
 app.use(express.static("public"))
 app.use(cookieParser())
+
+// --- 4. Create a Dedicated Favicon Route ---
+// Add this before your other routes.
+app.get('/favicon.ico', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'mytube-logo.png'));
+});
 
 // --- Routes Import ---
 import userRouter from './routes/user.routes.js'
@@ -41,7 +53,7 @@ app.get("/", (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="icon" type="image/svg+xml" href="../public/mytube-logo.png" />
+        <link rel="icon" type="image/png" href="/mytube-logo.png">
         <title>MyTube API Status</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');

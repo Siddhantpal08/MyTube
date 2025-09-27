@@ -79,6 +79,10 @@ const router = createBrowserRouter([
             { 
                 path: '/channel/:username', element: <ChannelPage /> 
             },
+            { 
+                path: '/results', // Change from '/search/:searchQuery' to '/results'
+                element: <SearchResults /> 
+            },
 
         ],
     },

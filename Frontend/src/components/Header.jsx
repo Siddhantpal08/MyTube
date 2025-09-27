@@ -27,7 +27,9 @@ function Header({ onMenuClick }) {
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) {
+            // Change this line to use query params
             navigate(`/results?search_query=${encodeURIComponent(searchQuery.trim())}`);
+            setSearchQuery("");
         }
     };
 

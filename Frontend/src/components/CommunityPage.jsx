@@ -1,59 +1,80 @@
-// src/components/CommunityPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
-import { placeholderAvatar, timeSince } from '../utils/formatters';
+import { useAuth } from '../Context/AuthContext';
+import { timeSince, placeholderAvatar } from '../utils/formatters';
 
+// A reusable component for a single tweet/post card
 const TweetCard = ({ tweet }) => (
-    <div className="flex items-start space-x-4 p-4 bg-gray-800 rounded-lg">
-        <img src={tweet.owner?.avatar || placeholderAvatar} alt={tweet.owner?.username} className="w-12 h-12 rounded-full" />
+    <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 flex items-start space-x-4">
+        <Link to={`/channel/${tweet.owner?.username}`}>
+            <img src={tweet.owner?.avatar || placeholderAvatar} alt={tweet.owner?.username} className="w-12 h-12 rounded-full" />
+        </Link>
         <div>
             <div className="flex items-center space-x-2">
-                <p className="font-bold text-white">{tweet.owner?.username}</p>
-                <p className="text-xs text-gray-400 font-normal">{timeSince(tweet.createdAt)}</p>
+                <Link to={`/channel/${tweet.owner?.username}`} className="font-bold text-white hover:underline">
+                    {tweet.owner?.fullName}
+                </Link>
+                <span className="text-gray-400 text-sm">@{tweet.owner?.username}</span>
+                <span className="text-gray-500 text-sm">· {timeSince(tweet.createdAt)}</span>
             </div>
-            <p className="text-gray-300 mt-2 whitespace-pre-wrap">{tweet.content}</p>
+            <p className="text-gray-300 mt-1 whitespace-pre-wrap">{tweet.content}</p>
         </div>
     </div>
 );
 
 function CommunityPage() {
+    const { isAuthenticated } = useAuth();
     const [tweets, setTweets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        setLoading(true);
-        // This endpoint fetches posts from channels you're subscribed to
-        axiosClient.get('/tweets/feed')
-            .then(res => {
-                setTweets(res.data.data || []);
-            })
-            .catch(err => {
-                console.error("Failed to fetch tweet feed:", err);
-            })
-            .finally(() => {
+        const fetchTweets = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                // THE FIX: This endpoint fetches ALL tweets and is public.
+                const response = await axiosClient.get('/tweets');
+                setTweets(response.data?.data?.docs || []);
+            } catch (err) {
+                console.error("Failed to fetch community posts:", err);
+                setError("Could not load the community feed. Please try again later.");
+            } finally {
                 setLoading(false);
-            });
+            }
+        };
+
+        fetchTweets();
     }, []);
-    
-    if (loading) return <div className="p-8 text-center text-white">Loading feed...</div>;
+
+    if (loading) {
+        return <div className="text-center text-white p-8">Loading Community Feed...</div>;
+    }
+
+    if (error) {
+        return <div className="text-center text-red-500 p-8">{error}</div>;
+    }
 
     return (
-        <div className="p-4 max-w-2xl mx-auto">
+        <div className="max-w-3xl mx-auto">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">Community Feed</h1>
-                <Link to="/add-tweet" className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-500">
-                    Create Post
-                </Link>
+                <h1 className="text-3xl font-bold text-white">Community</h1>
+                {/* Only show the "Add Post" button if the user is logged in */}
+                {isAuthenticated && (
+                    <Link to="/add-tweet" className="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 transition-colors">
+                        Add Post
+                    </Link>
+                )}
             </div>
-
+            
             <div className="space-y-4">
                 {tweets.length > 0 ? (
-                    tweets.map(tweet => <TweetCard key={tweet._id} tweet={tweet} />)
+                    tweets.map((tweet) => <TweetCard key={tweet._id} tweet={tweet} />)
                 ) : (
-                    <div className="text-center text-gray-400 p-8 bg-gray-800 rounded-lg">
-                        <h3 className="text-lg font-semibold">Your feed is empty</h3>
-                        <p className="mt-2">Posts from channels you subscribe to will appear here.</p>
+                    <div className="text-center text-gray-400 py-16 bg-gray-800 rounded-lg">
+                        <h2 className="text-xl font-semibold">The Community is Quiet</h2>
+                        <p className="mt-2 text-sm">There are no posts yet. If you're logged in, be the first to share something!</p>
                     </div>
                 )}
             </div>

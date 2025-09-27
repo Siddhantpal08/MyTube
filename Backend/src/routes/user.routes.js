@@ -3,7 +3,7 @@ import {
     registerUser, 
     loginUser, 
     logoutUser, 
-    refreshAcessToken, 
+    refreshAccessToken, 
     changeCurrentPassword, 
     getCurrentUser, 
     updateAccountDetails, 
@@ -32,7 +32,7 @@ router.route("/register").post(
 );
 
 router.route("/login").post(loginUser);
-router.route("/refresh-token").post(refreshAcessToken);
+router.route("/refresh-token").post(refreshAccessToken);
 router.route("/forgot-password").post(forgotPassword);
 router.route("/reset-password/:token").post(resetPassword);
 router.route("/search-channels").get(searchChannels);

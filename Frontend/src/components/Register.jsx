@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
-import myTubeLogo from '/mytube-logo.png'; // Import logo
+import myTubeLogo from '/mytube-logo.png'; // Import the logo
 
 function Register() {
     const navigate = useNavigate();

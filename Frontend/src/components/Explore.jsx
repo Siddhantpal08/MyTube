@@ -14,7 +14,7 @@ function ExplorePage() {
             setLoading(true);
             setError(null);
             try {
-                // Fetching all videos from your database
+                // This endpoint fetches all videos from your own database
                 const response = await axiosClient.get('/videos');
                 setVideos(response.data?.data?.docs || []);
             } catch (err) {

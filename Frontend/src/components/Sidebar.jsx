@@ -20,16 +20,12 @@ const MyVideosIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-
 function Sidebar({ isOpen }) {
     const { isAuthenticated } = useAuth();
     return (
-        <aside className={`fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-[#0F0F0F] border-r border-gray-800 transform transition-transform duration-300 ease-in-out z-40 ${isOpen ? 'translate-x-0' : 'md:translate-x-0 -translate-x-full'}`}>
+        <aside className={`fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-[#0F0F0F] border-r border-gray-800 transform transition-transform duration-300 ease-in-out z-40 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <div className="p-4 overflow-y-auto h-full">
                 <nav className="flex flex-col space-y-2">
-                    {/* --- General Links --- */}
                     <NavItem to="/" icon={<HomeIcon />} text="Home" />
                     <NavItem to="/explore" icon={<ExploreIcon />} text="Explore" />
-                    
                     <div className="border-t border-gray-700 my-4"></div>
-
-                    {/* --- Authenticated User Links --- */}
                     {isAuthenticated && (
                         <>
                             <h3 className="px-4 pt-2 pb-1 text-xs text-gray-500 font-semibold uppercase">You</h3>

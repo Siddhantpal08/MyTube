@@ -1,13 +1,26 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./Context/AuthContext";
+import App from "./App";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import Dashboard from "./pages/Dashboard";
+// import your other pages
 
-function App() {
+function AppRouter() {
   return (
-    <div className="app">
-      {/* Common layout (Navbar, Sidebar, etc.) */}
-      <Outlet />
-    </div>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        <Route path="/" element={<App />}>
+          <Route index element={<Dashboard />} />
+          {/* your other protected routes */}
+        </Route>
+      </Routes>
+    </AuthProvider>
   );
 }
 
-export default App;
+export default AppRouter;

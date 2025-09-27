@@ -24,11 +24,17 @@ const ErrorBoundary = () => {
     return <div className="text-center text-red-500 p-8">An unexpected error occurred. Please refresh the page.</div>;
 };
 
+const ErrorPage = () => (
+    <div className="flex items-center justify-center min-h-screen">
+        <h1 className="text-2xl text-white">Something went wrong. Please refresh.</h1>
+    </div>
+);
+
 const router = createBrowserRouter([
     {
         path: '/',
         element: <App />,
-        errorElement: <ErrorBoundary />, // Catches rendering errors
+        errorElement: <ErrorPage />, // Catches rendering errors
         children: [
             { path: '/', element: <HomePage /> },
             { path: 'watch/:videoId', element: <WatchPage /> },

@@ -16,6 +16,7 @@ function App() {
         setSidebarOpen(prev => !prev);
     };
 
+    // Display a full-screen loader while the auth state is being determined
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#0F0F0F] text-white">
@@ -27,6 +28,7 @@ function App() {
         );
     }
 
+    // Once loaded, render the full application layout
     return (
         <div className="bg-[#0F0F0F] text-white min-h-screen flex flex-col">
             <Toaster 
@@ -48,8 +50,8 @@ function App() {
                 <main 
                     className={`flex-1 transition-all duration-300 ease-in-out overflow-y-auto ${isSidebarOpen ? 'md:ml-64' : 'ml-0'}`}
                 >
-                    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                        <Outlet />
+                    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                        <Outlet /> {/* Pages like HomePage, WatchPage, etc., render here */}
                     </div>
                     <Footer />
                 </main>

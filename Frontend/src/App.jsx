@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { AuthProvider, useAuth } from './Context/AuthContext';
+import { useAuth } from './Context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -46,9 +46,7 @@ const AppLayout = () => {
 // because it is rendered by the router, all its children now have access to both.
 function App() {
   return (
-    <AuthProvider>
       <AppLayout />
-    </AuthProvider>
   );
 }
 

@@ -1,4 +1,24 @@
+import dotenv from "dotenv"
+import connectDB from "./db/index.js";
 import { app } from "./app.js";
 
-// Export the app for Vercel to use as a serverless function
-export default app;
+dotenv.config({
+    path: './.env'
+})
+
+connectDB()
+.then(() => {
+    app.on("error", (error) => {
+        console.log("EXPRESS APP ERROR: ", error);
+        throw error;
+    })
+
+    // This is the most important part for Railway.
+    // It tells the server to start listening for traffic.
+    app.listen(process.env.PORT || 8000, () => {
+        console.log(`✅ Server is running on port: ${process.env.PORT || 8000}`);
+    })
+})
+.catch((err) => {
+    console.log("MONGO DB CONNECTION FAILED !!! ", err);
+})

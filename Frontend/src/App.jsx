@@ -2,9 +2,9 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./Context/AuthContext";
 import App from "./App";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import Dashboard from "./pages/Dashboard";
+import LoginPage from "./components/LoginPage";
+import RegisterPage from "./components/RegisterPage";
+import Dashboard from "./components/Dashboard";
 // import your other pages
 
 function AppRouter() {

@@ -4,7 +4,8 @@ import {
     getUserTweets,
     updateTweet,
     deleteTweet,
-    getAllTweets
+    getAllTweets,
+    getSubscribedTweets,
 } from "../controllers/tweet.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 

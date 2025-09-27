@@ -19,9 +19,8 @@ function Header({ onMenuClick }) {
     const dropdownRef = useRef(null);
 
     const handleLogout = () => {
-        logout();
-        setIsDropdownOpen(false);
-        navigate('/');
+        logout(); // This now only clears the auth state
+        navigate('/'); // The component now handles the redirect
     };
 
     const handleSearch = (e) => {

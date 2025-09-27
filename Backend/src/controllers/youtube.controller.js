@@ -65,8 +65,6 @@ const searchVideos = asyncHandler(async (req, res) => {
 // IMPORTANT: Remember to add this same caching and error-handling pattern to your
 // getVideoDetails and getYouTubeComments functions to protect your quota there as well.
 
-export { searchVideos };
-
 const getVideoDetails = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const apiKey = process.env.YOUTUBE_API_KEY;

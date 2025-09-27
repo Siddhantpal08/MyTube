@@ -12,9 +12,6 @@ connectDB()
         console.log("EXPRESS APP ERROR: ", error);
         throw error;
     })
-
-    // This is the most important part for Railway.
-    // It tells the server to start listening for traffic.
     app.listen(process.env.PORT || 8000, () => {
         console.log(`✅ Server is running on port: ${process.env.PORT || 8000}`);
     })

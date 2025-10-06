@@ -61,10 +61,23 @@ const registerUser = asyncHandler(async (req, res) => {
         username: username.toLowerCase(),
     });
 
+    if (!user) {
+        throw new ApiError(500, "Something went wrong while registering the user");
+    }
+
+    // --- THE FIX IS HERE ---
+    // After creating the user, immediately generate tokens for them.
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+
     const createdUser = await User.findById(user._id).select("-password -refreshToken");
     if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registering the user");
     }
+
+    const options = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+    };
 
     return res.status(201).json(new ApiResponse(201, createdUser, "User registered successfully"));
 });

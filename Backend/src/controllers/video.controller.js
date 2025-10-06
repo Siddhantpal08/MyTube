@@ -7,58 +7,31 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy = "createdAt", sortType = "desc", userId } = req.query;
+    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
 
-    const pipeline = [];
+    // Create a match pipeline for aggregation
+    const match = {};
 
-    // Match videos based on search query or user ID
     if (query) {
-        pipeline.push({ $match: { $text: { $search: query } } });
-    } else if (userId) {
-        if (!isValidObjectId(userId)) {
-            throw new ApiError(400, "Invalid userId");
-        }
-        pipeline.push({ $match: { owner: new mongoose.Types.ObjectId(userId) } });
+        match.$text = { $search: query }; // Assuming you have a text index on title/description
     }
 
-    // Only show published videos
-    pipeline.push({ $match: { isPublished: true } });
-
-    // Join with users collection to get owner details (avatar, username)
-    pipeline.push({
-        $lookup: {
-            from: "users",
-            localField: "owner",
-            foreignField: "_id",
-            as: "ownerDetails",
-        },
-    });
-    pipeline.push({ $unwind: "$ownerDetails" });
+    if (userId) {
+        if (!isValidObjectId(userId)) throw new ApiError(400, "Invalid userId");
+        match.owner = new mongoose.Types.ObjectId(userId);
+    }
     
-    // Define the sorting stage
-    const sortStage = { $sort: { [sortBy]: sortType === 'asc' ? 1 : -1 } };
-    pipeline.push(sortStage);
-
-    // Project the final fields to send to the frontend
-    pipeline.push({
-        $project: {
-            _id: 1,
-            videofile: 1,
-            thumbnail: 1,
-            title: 1,
-            duration: 1,
-            views: 1,
-            createdAt: 1,
-            owner: {
-                _id: "$ownerDetails._id",
-                username: "$ownerDetails.username",
-                avatar: "$ownerDetails.avatar",
-            },
-        },
-    });
-
-    const videoAggregate = Video.aggregate(pipeline);
-    const options = { page: parseInt(page, 10), limit: parseInt(limit, 10) };
+    // Create the aggregation pipeline
+    const videoAggregate = Video.aggregate([
+        { $match: match }
+    ]);
+    
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        sort: { [sortBy || 'createdAt']: sortType === 'asc' ? 1 : -1 },
+        populate: { path: "owner", select: "username fullName avatar" }
+    };
 
     const videos = await Video.aggregatePaginate(videoAggregate, options);
 

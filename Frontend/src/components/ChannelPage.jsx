@@ -25,14 +25,13 @@ function ChannelPage() {
             setLoading(true);
             setError(null);
             try {
-                // Fetch channel profile and videos in parallel for faster loading
-                const [channelRes, videosRes] = await Promise.all([
-                    axiosClient.get(`/users/c/${username}`),
-                    axiosClient.get(`/videos?username=${username}`)
-                ]);
-
+                // Step 1: Fetch the channel profile to get the user's ID
+                const channelRes = await axiosClient.get(`/users/c/${username}`);
                 const channelData = channelRes.data.data;
                 setChannel(channelData);
+
+                // Step 2: Use the channel's ID to fetch only their videos
+                const videosRes = await axiosClient.get(`/videos?userId=${channelData._id}`);
                 setVideos(videosRes.data.data.docs);
                 
                 // Set initial subscription state from the fetched data

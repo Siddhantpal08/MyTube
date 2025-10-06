@@ -6,7 +6,7 @@ import { timeSince, formatCompactNumber, placeholderAvatar } from '../utils/form
 import ReactPlayer from 'react-player/youtube'; // Using specific YouTube player for better control
 
 import SaveToPlaylistModal from './SavetoPlaylistModal'; // Assuming this component exists
-import CommentsSection from './CommentsSection'; // Assuming this component exists and is final
+import CommentsSection from './CommentSection'; // Assuming this component exists and is final
 
 // --- Helper Functions & Sub-Components (defined outside for performance) ---
 

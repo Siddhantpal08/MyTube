@@ -18,7 +18,7 @@ const logApiError = (error, functionName) => {
     console.error(`--- END ERROR LOG ---\n`);
 };
 
-// --- Controller for Searching Videos ---
+// --- Controller for Searching Videos (with Rich Data) ---
 const searchVideos = asyncHandler(async (req, res) => {
     const { query, pageToken } = req.query;
     const apiKey = process.env.YOUTUBE_API_KEY;
@@ -26,33 +26,31 @@ const searchVideos = asyncHandler(async (req, res) => {
     if (!query) throw new ApiError(400, "Search query is required");
     if (!apiKey) throw new ApiError(500, "YouTube API key is not configured");
 
-    const cacheKey = `yt-search:${query}:${pageToken || 'p1'}`;
+    const cacheKey = `yt-search-rich:${query}:${pageToken || 'p1'}`;
 
     const cachedData = await ApiCache.findOne({ query: cacheKey });
     if (cachedData) {
-        console.log(`Serving search results for "${query}" from CACHE`);
+        console.log(`Serving RICH search results for "${query}" from CACHE`);
         return res.status(200).json(new ApiResponse(200, cachedData.response, "YouTube search results fetched (from cache)"));
     }
 
-    console.log(`Serving search results for "${query}" from API, UPDATING CACHE`);
-    const searchApiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=12&type=video${pageToken ? `&pageToken=${pageToken}` : ''}`;
-
+    console.log(`Serving RICH search results for "${query}" from API, UPDATING CACHE`);
+    
     try {
-        // --- STEP 1: Get the list of video IDs from the Search API ---
+        // STEP 1: Get only the video IDs from the Search API. This is very cheap on quota.
         const searchApiUrl = `https://www.googleapis.com/youtube/v3/search?part=id&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=12&type=video${pageToken ? `&pageToken=${pageToken}` : ''}`;
         const searchResponse = await axios.get(searchApiUrl, { timeout: 10000 });
 
         const videoIds = searchResponse.data.items.map(item => item.id.videoId).join(',');
         if (!videoIds) {
-            // If no videos are found, return an empty array and don't cache.
-            return res.status(200).json(new ApiResponse(200, { videos: [], hasNextPage: false }, "No videos found for the query"));
+            return res.status(200).json(new ApiResponse(200, { videos: [], hasNextPage: false }, "No videos found"));
         }
 
-        // --- STEP 2: Get rich details for all those video IDs in a single, efficient call ---
+        // STEP 2: Get rich details (statistics, duration) for all those video IDs in a single, efficient call.
         const videosApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoIds}&key=${apiKey}`;
         const detailsResponse = await axios.get(videosApiUrl, { timeout: 10000 });
 
-        // --- STEP 3: Combine the data into the final format the frontend expects ---
+        // STEP 3: Combine the data into the final format.
         const responseData = {
             videos: detailsResponse.data.items.map(item => ({
                 videoId: item.id,
@@ -67,16 +65,17 @@ const searchVideos = asyncHandler(async (req, res) => {
             hasNextPage: !!searchResponse.data.nextPageToken,
         };
         
-        // --- STEP 4: Save the complete, rich data to the cache ---
+        // STEP 4: Save the complete, rich data to the cache.
         await ApiCache.create({ query: cacheKey, response: responseData });
 
         return res.status(200).json(new ApiResponse(200, responseData, "YouTube search results fetched successfully"));
 
     } catch (error) {
-        logApiError(error, "searchVideos");
         if (error.response?.data?.error?.errors[0]?.reason === 'quotaExceeded') {
+            console.error("YOUTUBE API QUOTA EXCEEDED!");
             throw new ApiError(429, "YouTube API quota exceeded. Please try again tomorrow.");
         }
+        console.error("Error fetching from YouTube API:", error.message);
         throw new ApiError(500, "Failed to fetch search results from YouTube");
     }
 });

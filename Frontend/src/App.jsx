@@ -38,22 +38,22 @@ function App() {
 
             <Header onMenuClick={toggleSidebar} />
             
+            {/* --- THIS IS THE FINAL LAYOUT FIX --- */}
             <div className="flex flex-1 pt-16">
+                {/* 1. The Sidebar is now a direct flex item that controls its own width. */}
                 <Sidebar isOpen={isSidebarOpen} />
                 
-                {/* --- THE FIX IS HERE --- */}
-                {/* This <main> element now uses padding that changes with the sidebar's state. */}
-                {/* This allows the content inside (your video grid) to be fully responsive. */}
-                <main 
-                    className={`flex-1 overflow-y-auto transition-all duration-300 ease-in-out p-4 sm:p-6 lg:p-8 ${isSidebarOpen ? 'md:pl-72' : 'md:pl-28'}`}
-                >
-                    {/* The Outlet is not constrained by a container, letting pages like HomePage use the full available width for their grids. */}
-                    <Outlet />
+                {/* 2. The Main content area has `flex-1` which makes it automatically take up all remaining space. */}
+                <main className="flex-1 overflow-y-auto">
+                    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                        <Outlet />
+                    </div>
+                    <Footer />
                 </main>
             </div>
             
+            {/* 3. The ScrollToTopButton is outside the flex container so it can be positioned correctly. */}
             <ScrollToTopButton />
-            <Footer />
         </div>
     );
 }

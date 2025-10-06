@@ -1,111 +1,127 @@
-// src/pages/ChannelPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link, NavLink } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
-import VideoCard from '../components/VideoCard'; // Assuming you have this
+import VideoCard from '../components/VideoCard';
 import { useAuth } from '../Context/AuthContext';
 import toast from 'react-hot-toast';
+import { formatCompactNumber, placeholderAvatar } from '../utils/formatters';
 
 function ChannelPage() {
     const { username } = useParams();
-    const { user } = useAuth(); // Logged-in user context
+    const { user, isAuthenticated } = useAuth();
     const [channel, setChannel] = useState(null);
-    const [channelVideos, setChannelVideos] = useState([]);
+    const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isSubscribed, setIsSubscribed] = useState(false);
-    const [subscribersCount, setSubscribersCount] = useState(0);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchChannelData = async () => {
+            if (!username) return;
             setLoading(true);
+            setError(null);
             try {
-                // Fetch channel details
-                const channelRes = await axiosClient.get(`/users/c/${username}`);
-                setChannel(channelRes.data.data);
-                const channelId = channelRes.data.data._id;
+                // --- THE FIX: Fetch all data in parallel for better performance ---
+                const [channelRes, videosRes] = await Promise.all([
+                    axiosClient.get(`/users/c/${username}`),
+                    axiosClient.get(`/videos?username=${username}`) // Assuming your backend can filter videos by username
+                ]);
 
-                // Fetch subscription status and count
-                const subStatusRes = await axiosClient.get(`/subscriptions/c/${channelId}`);
-                setIsSubscribed(subStatusRes.data.data.isSubscribed);
-                setSubscribersCount(subStatusRes.data.data.subscribersCount);
+                const channelData = channelRes.data.data;
+                setChannel(channelData);
+                setVideos(videosRes.data.data.docs);
+                
+                // Set subscription status from the channel data
+                setSubscribersCount(channelData.subscribersCount);
+                setIsSubscribed(channelData.isSubscribed);
 
-                // Fetch channel's videos
-                const videosRes = await axiosClient.get(`/videos?userId=${channelId}`);
-                setChannelVideos(videosRes.data.data.docs);
-
-            } catch (error) {
-                toast.error("Failed to load channel data.");
-                console.error("Failed to fetch channel data:", error);
+            } catch (err) {
+                console.error("Failed to fetch channel data:", err);
+                setError("Could not load the channel. It may not exist or the API is down.");
             } finally {
                 setLoading(false);
             }
         };
+        fetchChannelData();
+    }, [username, isAuthenticated]); // Re-fetch if the logged-in user changes
 
-        if (username) {
-            fetchChannelData();
-        }
-    }, [username, user?._id]); // Re-fetch if username or logged-in user changes
+    const [isSubscribed, setIsSubscribed] = useState(false);
+    const [subscribersCount, setSubscribersCount] = useState(0);
 
     const handleToggleSubscription = async () => {
-        if (!user) {
-            return toast.error("Please log in to subscribe.");
-        }
+        if (!isAuthenticated) return toast.error("Please log in to subscribe.");
+        
+        // Optimistic UI update for instant feedback
+        setIsSubscribed(prev => !prev);
+        setSubscribersCount(prev => isSubscribed ? prev - 1 : prev + 1);
+
         try {
-            const endpoint = `/subscriptions/c/${channel._id}`;
-            await axiosClient.post(endpoint);
-
-            setIsSubscribed(prev => !prev);
-            setSubscribersCount(prev => isSubscribed ? prev - 1 : prev + 1);
-            toast.success(isSubscribed ? "Unsubscribed!" : "Subscribed!");
-
+            await axiosClient.post(`/subscriptions/c/${channel._id}`);
         } catch (error) {
+            // Revert state if the API call fails
+            setIsSubscribed(prev => !prev);
+            setSubscribersCount(prev => isSubscribed ? prev + 1 : prev - 1);
             toast.error("Failed to toggle subscription.");
-            console.error("Subscription toggle failed:", error);
         }
     };
 
     if (loading) return <div className="p-8 text-center text-white">Loading channel...</div>;
-    if (!channel) return <div className="p-8 text-center text-red-500">Channel not found.</div>;
+    if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
+    if (!channel) return <div className="p-8 text-center text-gray-400">Channel not found.</div>;
 
-    // Determine if the current user is viewing their own channel
     const isOwner = user?._id === channel._id;
 
     return (
-        <div className="p-4 text-white">
-            {/* Channel Header */}
-            <div className="bg-gray-800 rounded-lg p-6 mb-8 flex flex-col md:flex-row items-center md:justify-between">
-                <div className="flex items-center space-x-6">
-                    <img src={channel.avatar || 'default-avatar.png'} alt={channel.username} className="w-24 h-24 rounded-full object-cover border-2 border-red-500" />
-                    <div>
-                        <h1 className="text-4xl font-bold">{channel.fullName || channel.username}</h1>
-                        <p className="text-gray-400 text-lg">@{channel.username}</p>
-                        <p className="text-gray-500">{subscribersCount} subscribers</p>
+        <div>
+            {/* --- Channel Header with Cover Image --- */}
+            <div className="w-full">
+                <div className="h-40 md:h-52 bg-gray-700">
+                    {channel.coverImage && <img src={channel.coverImage} alt="Cover" className="w-full h-full object-cover" />}
+                </div>
+                <div className="px-4 sm:px-6 lg:px-8 bg-gray-800 py-4">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20">
+                        <img src={channel.avatar || placeholderAvatar} alt={channel.username} className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-gray-800 bg-gray-800" />
+                        <div className="ml-4 mt-4 sm:mt-0 flex-1">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-white">{channel.fullName}</h1>
+                            <div className="flex items-center space-x-3 text-sm text-gray-400">
+                                <span>@{channel.username}</span>
+                                <span>{formatCompactNumber(subscribersCount)} subscribers</span>
+                            </div>
+                        </div>
+                        {!isOwner && isAuthenticated && (
+                            <button
+                                onClick={handleToggleSubscription}
+                                className={`font-bold py-2 px-5 rounded-full transition-colors duration-200 ${isSubscribed ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600 hover:bg-red-700'}`}
+                            >
+                                {isSubscribed ? 'Subscribed' : 'Subscribe'}
+                            </button>
+                        )}
+                        {isOwner && (
+                            <Link to="/creator/dashboard" className="font-bold py-2 px-5 rounded-full bg-red-600 hover:bg-red-700 transition-colors">
+                                Manage
+                            </Link>
+                        )}
                     </div>
                 </div>
-                {!isOwner && user && ( // Only show subscribe button if not owner and logged in
-                    <button
-                        onClick={handleToggleSubscription}
-                        className={`mt-4 md:mt-0 py-2 px-6 rounded-lg font-semibold transition-colors duration-300 ${
-                            isSubscribed ? 'bg-gray-600 hover:bg-gray-700' : 'bg-red-600 hover:bg-red-700'
-                        }`}
-                    >
-                        {isSubscribed ? 'Subscribed' : 'Subscribe'}
-                    </button>
-                )}
-                {isOwner && (
-                     <Link to="/my-videos" className="mt-4 md:mt-0 py-2 px-6 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700">
-                        Manage My Videos
-                    </Link>
-                )}
             </div>
 
-            {/* Channel Videos */}
-            <h2 className="text-3xl font-bold mb-6">Videos from {channel.fullName || channel.username}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {channelVideos.length > 0 ? (
-                    channelVideos.map(video => <VideoCard key={video._id} video={video} />)
+            {/* --- Channel Navigation --- */}
+            <div className="border-b border-gray-700 mt-4 px-4 sm:px-6 lg:px-8">
+                <nav className="flex space-x-4">
+                    <NavLink to={`/channel/${username}`} end className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-white border-white' : 'text-gray-400 border-transparent hover:text-white'}`}>Videos</NavLink>
+                </nav>
+            </div>
+            
+            {/* --- Video Grid --- */}
+            <div className="p-4 sm:p-6 lg:p-8">
+                {videos.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+                        {videos.map(video => <VideoCard key={video._id} video={video} />)}
+                    </div>
                 ) : (
-                    <p className="col-span-full text-center text-gray-400">No videos uploaded by this channel yet.</p>
+                    <div className="text-center text-gray-400 py-16">
+                        <h2 className="text-xl font-semibold">No videos yet.</h2>
+                        {isOwner && <p className="mt-2">Upload your first video to get started!</p>}
+                    </div>
                 )}
             </div>
         </div>

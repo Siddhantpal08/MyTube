@@ -42,20 +42,24 @@ const getUserTweets = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, tweets, "Fetched user tweets successfully"));
   });
   
-  const getSubscribedTweets = asyncHandler(async (req, res) => {
-    // 1. Get the user's ID from the authenticated request
-    const userId = req.user._id;
-
-    // 2. Find all the channels the user is subscribed to
-    const subscriptions = await Subscription.find({ subscriber: userId }).select("channel");
+const getSubscribedTweets = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
+    const subscriptions = await Subscription.find({ subscriber: req.user._id });
     const channelIds = subscriptions.map(sub => sub.channel);
+    
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        populate: { path: "owner", select: "username fullName avatar" },
+        sort: { createdAt: -1 }
+    };
 
-    // 3. Find all tweets where the owner is one of the subscribed channels
-    const tweets = await Tweet.find({ owner: { $in: channelIds } })
-        .populate("owner", "username fullName avatar")
-        .sort({ createdAt: -1 });
+    const tweetsAggregate = Tweet.aggregate([
+        { $match: { owner: { $in: channelIds } } }
+    ]);
+    const result = await Tweet.aggregatePaginate(tweetsAggregate, options);
 
-    return res.status(200).json(new ApiResponse(200, { docs: tweets }, "Subscribed feed fetched successfully"));
+    return res.status(200).json(new ApiResponse(200, result, "Subscribed feed fetched successfully"));
 });
 
 
@@ -111,12 +115,17 @@ const deleteTweet = asyncHandler(async (req, res) => {
 });
 
 const getAllTweets = asyncHandler(async (req, res) => {
-  // This query finds all tweets from all users
-  const tweets = await Tweet.find({})
-      .populate("owner", "username avatar")
-      .sort({ createdAt: -1 });
+  const { page = 1, limit = 10 } = req.query;
+  const options = {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      populate: { path: "owner", select: "username fullName avatar" },
+      sort: { createdAt: -1 }
+  };
+  const tweetsAggregate = Tweet.aggregate([]);
+  const result = await Tweet.aggregatePaginate(tweetsAggregate, options);
 
-  return res.status(200).json(new ApiResponse(200, tweets, "All tweets fetched successfully"));
+  return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
 

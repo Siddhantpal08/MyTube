@@ -133,6 +133,11 @@ function WatchPage() {
 
     const isOwner = isAuthenticated && video?.owner?._id === user?._id;
 
+    const videoSourceUrl = video.videofile && video.videofile.startsWith('http://') 
+        ? video.videofile.replace('http://', 'https://') 
+        : video.videofile;
+
+
     return (
         <div className="p-4 md:p-6 lg:p-8">
             {showPlaylistModal && <SaveToPlaylistModal videoId={videoId} onClose={() => setShowPlaylistModal(false)} />}
@@ -144,7 +149,7 @@ function WatchPage() {
                         {isExternalVideo ? (
                             <ReactPlayer url={`https://www.youtube.com/watch?v=${videoId}`} width="100%" height="100%" controls playing />
                         ) : (
-                            <video key={video.videofile} src={video.videofile} controls className="w-full h-full" />
+                            <video key={video.videofile} src={videoSourceUrl} controls className="w-full h-full" />
                         )}
                     </div>
 

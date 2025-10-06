@@ -40,10 +40,11 @@ function App() {
             
             {/* --- THIS IS THE FINAL LAYOUT FIX --- */}
             <div className="flex flex-1 pt-16">
-                {/* 1. The Sidebar is now a direct flex item that controls its own width. */}
+                {/* 1. The Sidebar is no longer 'fixed'. It's a direct child of the flex container. */}
+                {/* Its own classes will control its width and animation. */}
                 <Sidebar isOpen={isSidebarOpen} />
                 
-                {/* 2. The Main content area has `flex-1` which makes it automatically take up all remaining space. */}
+                {/* 2. The Main content area, with `flex-1`, will automatically and fluidly take up all remaining space. */}
                 <main className="flex-1 overflow-y-auto">
                     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
                         <Outlet />
@@ -52,7 +53,6 @@ function App() {
                 </main>
             </div>
             
-            {/* 3. The ScrollToTopButton is outside the flex container so it can be positioned correctly. */}
             <ScrollToTopButton />
         </div>
     );

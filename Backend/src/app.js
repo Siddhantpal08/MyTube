@@ -1,49 +1,44 @@
 import express from 'express';
 import cors from "cors";
 import cookieParser from 'cookie-parser';
-import path from 'path'; // <-- 1. Import the 'path' module
-import { fileURLToPath } from 'url'; // <-- 2. Import 'fileURLToPath'
 
 const app = express();
 
-// --- Setup for __dirname in ES Modules ---
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 app.use(cors({
-    origin: process.env.CORS_ORIGIN, // Make sure this is set to your Vercel frontend URL in the dashboard
-    credentials: true
-}))
+    origin: process.env.CORS_ORIGIN,
+    credentials: true
+}));
 
+app.use(express.json({ limit: "16kb" }));
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+app.use(express.static("public")); // Only need this once
+app.use(cookieParser());
 
-// --- 3. Serve Static Files Correctly ---
-// This tells Express to serve everything in the 'public' folder.
-app.use(express.static(path.join(__dirname, '..', 'public')));
-
-
-// Middleware setup remains the same
-app.use(express.json({limit: "16kb"}))
-app.use(express.urlencoded({extended: true, limit: "16kb"}))
-app.use(express.static("public"))
-app.use(cookieParser())
-
-// --- 4. Create a Dedicated Favicon Route ---
-// Add this before your other routes.
-app.get('/favicon.ico', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'mytube-logo.png'));
-});
-
-// --- Routes Import ---
-import userRouter from './routes/user.routes.js'
-import healthcheckRouter from "./routes/healthcheck.routes.js"
-import tweetRouter from "./routes/tweet.routes.js"
-import subscriptionRouter from "./routes/subscription.routes.js"
-import videoRouter from "./routes/video.routes.js"
-import commentRouter from "./routes/comment.routes.js"
-import likeRouter from "./routes/like.routes.js"
-import playlistRouter from "./routes/playlist.routes.js"
-import dashboardRouter from "./routes/dashboard.routes.js"
+// --- ROUTES IMPORT ---
+import userRouter from './routes/user.routes.js';
+import healthcheckRouter from "./routes/healthcheck.routes.js";
+import tweetRouter from "./routes/tweet.routes.js";
+import subscriptionRouter from "./routes/subscription.routes.js";
+import videoRouter from "./routes/video.routes.js";
+import commentRouter from "./routes/comment.routes.js";
+import likeRouter from "./routes/like.routes.js";
+import playlistRouter from "./routes/playlist.routes.js";
+import dashboardRouter from "./routes/dashboard.routes.js";
 import youtubeRouter from './routes/youtube.routes.js';
+
+// --- ROUTES DECLARATION (THE FIX IS HERE) ---
+// This is the critical section that was missing.
+// It tells your app to use your routers for the specified URL paths.
+app.use("/api/v1/healthcheck", healthcheckRouter);
+app.use("/api/v1/users", userRouter); // This makes /api/v1/users/register work
+app.use("/api/v1/tweets", tweetRouter);
+app.use("/api/v1/subscriptions", subscriptionRouter);
+app.use("/api/v1/videos", videoRouter);
+app.use("/api/v1/comments", commentRouter);
+app.use("/api/v1/likes", likeRouter);
+app.use("/api/v1/playlist", playlistRouter);
+app.use("/api/v1/dashboard", dashboardRouter);
+app.use("/api/v1/youtube", youtubeRouter);
 
 // --- Root Route: API Landing Page ---
 app.get("/", (req, res) => {
@@ -176,17 +171,6 @@ app.get("/", (req, res) => {
     `;
     res.status(200).send(apiStatusHtml);
 });
-
-app.use("/api/v1/healthcheck", healthcheckRouter)
-app.use("/api/v1/users", userRouter)
-app.use("/api/v1/tweets", tweetRouter)
-app.use("/api/v1/subscriptions", subscriptionRouter)
-app.use("/api/v1/videos", videoRouter)
-app.use("/api/v1/comments", commentRouter)
-app.use("/api/v1/likes", likeRouter)
-app.use("/api/v1/playlist", playlistRouter)
-app.use("/api/v1/dashboard", dashboardRouter)
-app.use("/api/v1/youtube", youtubeRouter);
 
 // Export the configured app
 export { app }

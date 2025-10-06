@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
 
-// This new NavItem is smarter. It knows how to hide its text and center its icon.
+// This new NavItem is smarter. It knows how to hide its text and center its icon when collapsed.
 const NavItem = ({ to, icon, text, isOpen, end = false }) => (
     <NavLink 
         to={to} 
@@ -10,9 +10,9 @@ const NavItem = ({ to, icon, text, isOpen, end = false }) => (
         className={({ isActive }) => 
             `flex items-center p-3 my-1 rounded-lg transition-colors duration-200 ${isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`
         }
-        title={text} // This shows the text on hover when the sidebar is closed
+        title={text} // This shows the full text on hover when the sidebar is closed
     >
-        <div className={`flex-shrink-0 ${!isOpen && 'mx-auto'}`}>
+        <div className={`flex-shrink-0 transition-all duration-300 ${!isOpen && 'mx-auto'}`}>
             {icon}
         </div>
         <span 
@@ -41,6 +41,7 @@ function Sidebar({ isOpen }) {
     const { isAuthenticated } = useAuth();
     return (
         // It is no longer 'fixed'. It is a flex item that changes its width.
+        // `flex-shrink-0` is essential to prevent it from being squished.
         <aside className={`transition-all duration-300 ease-in-out bg-[#0F0F0F] border-r border-gray-800 flex-shrink-0 ${isOpen ? 'w-64' : 'w-20'}`}>
             <div className="p-2 overflow-y-auto h-full scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
                 <nav className="flex flex-col space-y-1">
@@ -64,8 +65,7 @@ function Sidebar({ isOpen }) {
                             <NavItem to="/history" icon={<HistoryIcon />} text="History" isOpen={isOpen} />
                             <NavItem to="/playlists" icon={<PlaylistIcon />} text="Playlists" isOpen={isOpen} />
                             <NavItem to="/my-videos" icon={<MyVideosIcon />} text="My Videos" isOpen={isOpen} />
-           _
-                      </>
+                        </>
                     )}
                 </nav>
             </div>

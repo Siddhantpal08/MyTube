@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import useYouTubeInfiniteScroll from './UseYoutubeInfiniteScroll.jsx';
+import useYouTubeInfiniteScroll from '../hooks/useYouTubeInfiniteScroll.js';
 import VideoCard from './VideoCard';
 import SkeletonCard from './SkeletonCard';
 import { useApp } from '../Context/AppContext';
@@ -12,10 +12,13 @@ const QuotaBanner = () => (
 );
 
 function HomePage() {
+    // This hook fetches a general feed of trending videos for the infinite scroll
     const { videos, loading, hasMore, error, fetchMoreVideos } = useYouTubeInfiniteScroll('latest trending videos');
     const { youtubeQuotaExhausted } = useApp();
     const observer = useRef();
 
+    // This callback is attached to the last video card. When it becomes visible,
+    // the IntersectionObserver triggers the next API call.
     const lastVideoElementRef = useCallback(node => {
         if (loading) return;
         if (observer.current) observer.current.disconnect();
@@ -27,10 +30,10 @@ function HomePage() {
         if (node) observer.current.observe(node);
     }, [loading, hasMore, fetchMoreVideos]);
 
-    // Show skeletons only on the very first page load
+    // Show a grid of skeleton cards only on the initial page load
     if (videos.length === 0 && loading) {
         return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-4 gap-y-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-6 gap-y-10">
                 {Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
         );
@@ -42,8 +45,8 @@ function HomePage() {
             {error && !youtubeQuotaExhausted && <div className="text-center text-red-500 p-8 text-lg">{error}</div>}
             
             {/* --- THIS IS THE FINAL RESPONSIVE GRID --- */}
-            {/* It automatically adjusts columns based on screen width. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-4 gap-y-8">
+            {/* It automatically adjusts columns based on the available space provided by the App.jsx layout. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-6 gap-y-10">
                 {videos.map((video, index) => {
                     if (videos.length === index + 1) {
                         return (

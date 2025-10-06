@@ -27,7 +27,7 @@ function App() {
     }
 
     return (
-        <div className="bg-[#0F0F0F] text-white min-h-screen flex flex-col">
+        <div className="bg-[#0F0F0F] text-white h-screen flex flex-col">
             <Toaster 
                 position="bottom-center"
                 reverseOrder={false}
@@ -38,16 +38,14 @@ function App() {
 
             <Header onMenuClick={toggleSidebar} />
             
-            {/* --- THIS IS THE FINAL LAYOUT FIX --- */}
-            <div className="flex flex-1 pt-16">
-                {/* 1. The Sidebar is no longer 'fixed'. It's a direct child of the flex container. */}
-                {/* Its own classes will control its width and animation. */}
+            <div className="flex flex-1 overflow-hidden pt-16">
+                {/* The Sidebar is a flex item; it is NOT fixed. It controls its own width. */}
                 <Sidebar isOpen={isSidebarOpen} />
                 
-                {/* 2. The Main content area, with `flex-1`, will automatically and fluidly take up all remaining space. */}
+                {/* The Main content area, with `flex-1`, automatically and fluidly takes up all remaining space. */}
                 <main className="flex-1 overflow-y-auto">
                     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                        <Outlet />
+             _       _            <Outlet />
                     </div>
                     <Footer />
                 </main>

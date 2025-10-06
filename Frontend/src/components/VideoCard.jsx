@@ -53,10 +53,10 @@ function VideoCard({ video }) {
             </Link>
             <div className="mt-2 flex items-start space-x-3">
                 <Link to={isChannelLinkable ? `/channel/${video.owner.username}` : '#'} onClick={handleChannelClick}>
-                    <img 
+                <img 
                         src={video.owner?.avatar || placeholderAvatar} 
-                        alt={channelName} 
-                        className="w-9 h-9 rounded-full object-cover bg-gray-600 flex-shrink-0 mt-1" 
+                        alt={channelName}
+                        className="w-9 h-9 channel-avatar bg-gray-600 flex-shrink-0 mt-1" 
                     />
                 </Link>
                 <div>

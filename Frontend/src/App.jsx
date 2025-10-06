@@ -43,7 +43,9 @@ function App() {
             <Header onMenuClick={toggleSidebar} />
             
             <div className="flex flex-1 pt-16">
-                <Sidebar isOpen={isSidebarOpen} />
+                <div className="flex-shrink-0">
+                    <Sidebar isOpen={isSidebarOpen} />
+                </div>
                 
                 <main 
                     className={`flex-1 transition-all duration-300 ease-in-out overflow-y-auto ${isSidebarOpen ? 'md:ml-64' : 'ml-0'}`}

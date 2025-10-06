@@ -37,37 +37,53 @@ const searchVideos = asyncHandler(async (req, res) => {
     console.log(`Serving RICH search results for "${query}" from API, UPDATING CACHE`);
     
     try {
-        // STEP 1: Get only the video IDs from the Search API. This is very cheap on quota.
+        // Step 1: Get Video IDs from Search API
         const searchApiUrl = `https://www.googleapis.com/youtube/v3/search?part=id&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=12&type=video${pageToken ? `&pageToken=${pageToken}` : ''}`;
         const searchResponse = await axios.get(searchApiUrl, { timeout: 10000 });
-
         const videoIds = searchResponse.data.items.map(item => item.id.videoId).join(',');
-        if (!videoIds) {
-            return res.status(200).json(new ApiResponse(200, { videos: [], hasNextPage: false }, "No videos found"));
-        }
+        if (!videoIds) return res.status(200).json(new ApiResponse(200, { videos: [], hasNextPage: false }, "No videos found"));
 
-        // STEP 2: Get rich details (statistics, duration) for all those video IDs in a single, efficient call.
+        // Step 2: Get Rich Details for all videos
         const videosApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoIds}&key=${apiKey}`;
         const detailsResponse = await axios.get(videosApiUrl, { timeout: 10000 });
+        const videoItems = detailsResponse.data.items;
 
-        // STEP 3: Combine the data into the final format.
+        // --- THE FIX: GET CHANNEL AVATARS ---
+        // Step 2.5: Get all unique Channel IDs from the video details
+        const channelIds = [...new Set(videoItems.map(item => item.snippet.channelId))].join(',');
+
+        // Step 2.6: Make one efficient API call to get all channel details
+        const channelsApiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelIds}&key=${apiKey}`;
+        const channelsResponse = await axios.get(channelsApiUrl, { timeout: 10000 });
+        
+        // Create a quick lookup map for channel avatars
+        const channelAvatars = channelsResponse.data.items.reduce((acc, item) => {
+            acc[item.id] = item.snippet.thumbnails.default.url;
+            return acc;
+        }, {});
+        // --- END FIX ---
+
+        // Step 3: Combine all data into the final response
         const responseData = {
-            videos: detailsResponse.data.items.map(item => ({
+            videos: videoItems.map(item => ({
                 videoId: item.id,
                 title: item.snippet.title,
                 thumbnail: item.snippet.thumbnails.high.url,
                 channelTitle: item.snippet.channelTitle,
                 publishTime: item.snippet.publishedAt,
                 views: parseInt(item.statistics.viewCount || 0, 10),
-                duration: item.contentDetails.duration, // e.g., "PT15M33S"
+                duration: item.contentDetails.duration,
+                // THE FIX: Add the owner object with the avatar for YouTube videos
+                owner: {
+                    username: item.snippet.channelTitle,
+                    avatar: channelAvatars[item.snippet.channelId] || "",
+                }
             })),
             nextPageToken: searchResponse.data.nextPageToken,
             hasNextPage: !!searchResponse.data.nextPageToken,
         };
         
-        // STEP 4: Save the complete, rich data to the cache.
         await ApiCache.create({ query: cacheKey, response: responseData });
-
         return res.status(200).json(new ApiResponse(200, responseData, "YouTube search results fetched successfully"));
 
     } catch (error) {

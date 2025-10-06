@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import useYouTubeInfiniteScroll from './UseYoutubeInfiniteScroll.jsx'
+import useYouTubeInfiniteScroll from '../hooks/useYouTubeInfiniteScroll.js';
 import VideoCard from './VideoCard';
 import SkeletonCard from './SkeletonCard';
 import { useApp } from '../Context/AppContext';
@@ -12,7 +12,6 @@ const QuotaBanner = () => (
 );
 
 function HomePage() {
-    // Use the new hook to get a general feed of trending videos
     const { videos, loading, hasMore, error, fetchMoreVideos } = useYouTubeInfiniteScroll('latest trending videos');
     const { youtubeQuotaExhausted } = useApp();
     const observer = useRef();
@@ -32,7 +31,6 @@ function HomePage() {
     if (videos.length === 0 && loading) {
         return (
             <div className="p-4">
-                <div className="h-8 w-1/4 bg-gray-700 rounded animate-pulse mb-6"></div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
                     {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
                 </div>
@@ -42,14 +40,13 @@ function HomePage() {
 
     return (
         <div className="p-4">
-            <h1 className="text-3xl font-bold text-white mb-6">Home Feed</h1>
+            {/* The "Home Feed" title has been removed as requested */}
             
             {youtubeQuotaExhausted && <QuotaBanner />}
             {error && <div className="text-center text-red-500 p-8 text-lg">{error}</div>}
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
                 {videos.map((video, index) => {
-                    // Attach the ref to the last video in the list to trigger the next fetch
                     if (videos.length === index + 1) {
                         return (
                             <div ref={lastVideoElementRef} key={video.videoId}>

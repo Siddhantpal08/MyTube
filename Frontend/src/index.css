@@ -1,3 +1,28 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* === Custom Scrollbar for Dark Theme === */
+
+/* Works on Chrome, Edge, Safari */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  /* The track (the background of the scrollbar) */
+  ::-webkit-scrollbar-track {
+    background: #0f0f0f; /* A dark color matching your background */
+  }
+  
+  /* The handle (the draggable part of the scrollbar) */
+  ::-webkit-scrollbar-thumb {
+    background-color: #3e3e3e; /* A dark, visible grey */
+    border-radius: 20px;
+    border: 2px solid #0f0f0f; /* Creates a nice padding effect */
+  }
+  
+  /* The handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #555555; /* Slightly lighter on hover */
+  }

@@ -38,20 +38,40 @@ const searchVideos = asyncHandler(async (req, res) => {
     const searchApiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=12&type=video${pageToken ? `&pageToken=${pageToken}` : ''}`;
 
     try {
-        const response = await axios.get(searchApiUrl, { timeout: 10000 });
+        // --- STEP 1: Get the list of video IDs from the Search API ---
+        const searchApiUrl = `https://www.googleapis.com/youtube/v3/search?part=id&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=12&type=video${pageToken ? `&pageToken=${pageToken}` : ''}`;
+        const searchResponse = await axios.get(searchApiUrl, { timeout: 10000 });
+
+        const videoIds = searchResponse.data.items.map(item => item.id.videoId).join(',');
+        if (!videoIds) {
+            // If no videos are found, return an empty array and don't cache.
+            return res.status(200).json(new ApiResponse(200, { videos: [], hasNextPage: false }, "No videos found for the query"));
+        }
+
+        // --- STEP 2: Get rich details for all those video IDs in a single, efficient call ---
+        const videosApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoIds}&key=${apiKey}`;
+        const detailsResponse = await axios.get(videosApiUrl, { timeout: 10000 });
+
+        // --- STEP 3: Combine the data into the final format the frontend expects ---
         const responseData = {
-            videos: response.data.items.map(item => ({
-                videoId: item.id.videoId,
+            videos: detailsResponse.data.items.map(item => ({
+                videoId: item.id,
                 title: item.snippet.title,
                 thumbnail: item.snippet.thumbnails.high.url,
                 channelTitle: item.snippet.channelTitle,
-                publishTime: item.snippet.publishTime,
+                publishTime: item.snippet.publishedAt,
+                views: parseInt(item.statistics.viewCount || 0, 10),
+                duration: item.contentDetails.duration, // e.g., "PT15M33S"
             })),
-            nextPageToken: response.data.nextPageToken,
-            hasNextPage: !!response.data.nextPageToken,
+            nextPageToken: searchResponse.data.nextPageToken,
+            hasNextPage: !!searchResponse.data.nextPageToken,
         };
+        
+        // --- STEP 4: Save the complete, rich data to the cache ---
         await ApiCache.create({ query: cacheKey, response: responseData });
+
         return res.status(200).json(new ApiResponse(200, responseData, "YouTube search results fetched successfully"));
+
     } catch (error) {
         logApiError(error, "searchVideos");
         if (error.response?.data?.error?.errors[0]?.reason === 'quotaExceeded') {

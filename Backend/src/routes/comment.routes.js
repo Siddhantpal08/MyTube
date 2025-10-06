@@ -1,28 +1,23 @@
 import { Router } from 'express';
 import {
-    addComment,
-    deleteComment,
-    getVideoComments,
+    getVideoComments, 
+    addComment, 
     updateComment,
-    getInternalCommentsForYoutubeVideo,
-
+    deleteComment
 } from "../controllers/comment.controller.js";
-// Import both auth middlewares
-import { verifyJWT, verifyJWTAndSetUser } from "../middlewares/auth.middleware.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// IMPROVEMENT: Use flexible auth for viewing, strict auth for actions
-router.route("/:videoId")
-    .get(verifyJWTAndSetUser, getVideoComments) // Anyone can view comments
-    .post(verifyJWT, addComment);            // Must be logged in to post
+// This single, smart route gets all comments for any video (internal or external).
+// It is public, so anyone can view comments.
+router.route("/:videoId").get(getVideoComments);
 
-router.route("/yt/:youtubeVideoId")
-    .get(verifyJWTAndSetUser, getInternalCommentsForYoutubeVideo);
+// All routes below this line require a user to be logged in.
+router.use(verifyJWT);
 
-
-router.route("/c/:commentId")
-    .delete(verifyJWT, deleteComment)         // Must be logged in to delete
-    .patch(verifyJWT, updateComment);          // Must be logged in to update
+// --- Protected Routes ---
+router.route("/:videoId").post(addComment); // Add a comment to a video
+router.route("/c/:commentId").patch(updateComment).delete(deleteComment); // Update or delete a specific comment
 
 export default router;

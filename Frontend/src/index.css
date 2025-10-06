@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+.channel-avatar {
+  border-radius: 9999px; /* This is the same as rounded-full */
+  object-fit: cover;
+}
+
 /* === Custom Scrollbar for Dark Theme === */
 
 /* Works on Chrome, Edge, Safari */

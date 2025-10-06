@@ -1,6 +1,5 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Tweet } from "../models/tweet.model.js";
-import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -28,7 +27,7 @@ const createTweet = asyncHandler(async (req, res) => {
     return res.status(201).json(new ApiResponse(201, createdTweet, "Tweet created successfully"));
 });
 
-// Controller to get all tweets from a specific user
+// Controller to get all tweets from a specific user, with pagination
 const getUserTweets = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const { page = 1, limit = 10 } = req.query;
@@ -50,7 +49,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, result, "User tweets fetched successfully"));
 });
  
-// Controller for the public "Community" feed, gets all tweets from all users
+// Controller for the public "Community" feed, gets all tweets from all users, with pagination
 const getAllTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const options = {
@@ -70,7 +69,7 @@ const getAllTweets = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
-// Controller for the private "Your Feed", gets tweets from subscribed channels
+// Controller for the private "Your Feed", gets tweets from subscribed channels, with pagination
 const getSubscribedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const userId = req.user._id;

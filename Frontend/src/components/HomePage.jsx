@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import useYouTubeInfiniteScroll from '../hooks/useYouTubeInfiniteScroll.js';
+import useYouTubeInfiniteScroll from './UseYoutubeInfiniteScroll.jsx';
 import VideoCard from './VideoCard';
 import SkeletonCard from './SkeletonCard';
 import { useApp } from '../Context/AppContext';

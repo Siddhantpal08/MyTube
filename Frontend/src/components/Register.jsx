@@ -3,18 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
-import myTubeLogo from '/mytube-logo.png'; // Import the logo
+import myTubeLogo from '/mytube-logo.png';
 
 function Register() {
     const navigate = useNavigate();
     const { login } = useAuth();
-    const [formData, setFormData] = useState({
-        username: '',
-        email: '',
-        fullName: '',
-        password: '',
-    });
+    const [formData, setFormData] = useState({ username: '', email: '', fullName: '', password: '' });
     const [avatar, setAvatar] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(''); // For showing the selected image
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -24,42 +20,16 @@ function Register() {
     };
 
     const handleFileChange = (e) => {
-        setAvatar(e.target.files[0]);
+        const file = e.target.files[0];
+        if (file) {
+            setAvatar(file);
+            setAvatarPreview(URL.createObjectURL(file)); // Create a temporary URL for preview
+        }
     };
 
     const handleRegister = async (e) => {
         e.preventDefault();
-        if (formData.password.length < 6) {
-            toast.error("Password must be at least 6 characters long.");
-            return;
-        }
-        
-        setLoading(true);
-        setError('');
-        const toastId = toast.loading("Creating your account...");
-
-        const submissionData = new FormData();
-        Object.entries(formData).forEach(([key, value]) => {
-            submissionData.append(key, value);
-        });
-        if (avatar) submissionData.append("avatar", avatar);
-
-        try {
-            const response = await axiosClient.post('/users/register', submissionData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            
-            const { user, accessToken } = response.data.data;
-            login(user, accessToken);
-            toast.success(`Welcome to MyTube, ${user.username}!`, { id: toastId });
-            navigate('/');
-        } catch (err) {
-            const errorMessage = err.response?.data?.message || "Registration failed. Please try again.";
-            setError(errorMessage);
-            toast.error(errorMessage, { id: toastId });
-        } finally {
-            setLoading(false);
-        }
+        // ... (your existing handleRegister logic is perfect) ...
     };
 
     return (
@@ -72,39 +42,37 @@ function Register() {
                 </div>
                 
                 <form onSubmit={handleRegister} className="space-y-4">
-                    <InputField label="Username" name="username" type="text" value={formData.username} onChange={handleChange} placeholder="e.g., siddhantpal" required />
-                    <InputField label="Full Name" name="fullName" type="text" value={formData.fullName} onChange={handleChange} placeholder="e.g., Siddhant Pal" required />
-                    <InputField label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="you@example.com" required />
-                    <InputField label="Password" name="password" type="password" value={formData.password} onChange={handleChange} placeholder="••••••••" required />
-                    
-                    <div>
-                        <label htmlFor="avatar" className="block text-sm font-medium text-gray-300 mb-1">Avatar (Optional)</label>
-                        <input
-                            type="file"
-                            id="avatar"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                            className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-600 file:text-white hover:file:bg-red-700 cursor-pointer"
-                        />
+                    {/* --- Avatar Preview --- */}
+                    <div className="flex justify-center">
+                        <label htmlFor="avatar" className="cursor-pointer">
+                            <img 
+                                src={avatarPreview || `https://api.dicebear.com/8.x/initials/svg?seed=${formData.fullName || formData.username || '?'}`} 
+                                alt="Avatar Preview" 
+                                className="w-24 h-24 rounded-full object-cover border-2 border-gray-600 hover:border-red-500 transition-colors"
+                            />
+                            <input type="file" id="avatar" accept="image/*" onChange={handleFileChange} className="hidden" />
+                        </label>
                     </div>
+                    
+                    <InputField label="Full Name" name="fullName" type="text" value={formData.fullName} onChange={handleChange} required />
+                    <InputField label="Username" name="username" type="text" value={formData.username} onChange={handleChange} required />
+                    <InputField label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} required />
+                    <InputField label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
                     
                     {error && <p className="text-sm text-center text-red-400">{error}</p>}
                     
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 font-bold text-lg text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-900 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-3 font-bold text-lg text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-900 transition-colors duration-200 disabled:opacity-50"
                     >
                         {loading ? 'Creating Account...' : 'Create Account'}
                     </button>
                 </form>
 
                 <div className="text-center text-sm">
-                    <p className="text-gray-400">
-                        Already have an account?{' '}
-                        <Link to="/login" className="font-medium text-red-500 hover:text-red-400">
-                            Login here
-                        </Link>
+                    <p className="text-gray-400">Already have an account?{' '}
+                        <Link to="/login" className="font-medium text-red-500 hover:text-red-400">Login here</Link>
                     </p>
                 </div>
             </div>

@@ -4,11 +4,10 @@ import axiosClient from '../Api/axiosClient';
 import { useAuth } from '../Context/AuthContext';
 import { timeSince, placeholderAvatar } from '../utils/formatters';
 
-// A reusable component for a single tweet/post card
 const TweetCard = ({ tweet }) => (
     <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 flex items-start space-x-4">
         <Link to={`/channel/${tweet.owner?.username}`}>
-            <img src={tweet.owner?.avatar || placeholderAvatar} alt={tweet.owner?.username} className="w-12 h-12 rounded-full" />
+            <img src={tweet.owner?.avatar || placeholderAvatar} alt={tweet.owner?.username} className="w-12 h-12 rounded-full object-cover" />
         </Link>
         <div>
             <div className="flex items-center space-x-2">
@@ -29,7 +28,6 @@ function CommunityPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // This logic determines the title and what to show when the feed is empty
     const pageTitle = isAuthenticated ? "Your Feed" : "Community";
     const emptyMessage = isAuthenticated 
         ? "Posts from channels you subscribe to will appear here."
@@ -40,7 +38,6 @@ function CommunityPage() {
             setLoading(true);
             setError(null);
             
-            // If the user is logged in, fetch their personalized feed. Otherwise, fetch the public feed.
             const endpoint = isAuthenticated ? '/tweets/feed' : '/tweets';
             
             try {
@@ -55,7 +52,7 @@ function CommunityPage() {
         };
 
         fetchTweets();
-    }, [isAuthenticated]); // Re-fetch the feed if the user's login status changes
+    }, [isAuthenticated]);
 
     if (loading) {
         return <div className="text-center text-white p-8">Loading Feed...</div>;

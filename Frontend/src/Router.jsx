@@ -23,6 +23,7 @@ import CommunityPage from './components/CommunityPage.jsx';
 import AddTweetPage from './components/AddTweetPage.jsx';
 import ChannelPage from './components/ChannelPage.jsx';
 import ChannelSearchPage from './components/ChannelSearchPage.jsx';
+import CategoryPage from './components/CategoryPage.jsx';
 
 // A simple fallback component to display when an error occurs during rendering.
 // This prevents the application from crashing with a blank white screen.
@@ -85,7 +86,11 @@ const router = createBrowserRouter([
             {
                 path: 'add-tweet',
                 element: <ProtectedRoute><AddTweetPage /></ProtectedRoute>
-            }
+            },
+            { 
+                path: 'category/:categoryName', 
+                element: <CategoryPage /> 
+            },
         ],
     },
 ]);

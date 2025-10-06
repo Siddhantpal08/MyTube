@@ -1,104 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import axiosClient from '../Api/axiosClient';
-import VideoCard from './VideoCard'; // We'll create this next
-import SkeletonCard from './SkeletonCard'; // We'll create this next
-import { useApp } from '../Context/AppContext'; 
-
+import React, { useEffect, useRef, useCallback } from 'react';
+import useYouTubeInfiniteScroll from '../hooks/useYouTubeInfiniteScroll.js';
+import VideoCard from './VideoCard';
+import SkeletonCard from './SkeletonCard';
+import { useApp } from '../Context/AppContext';
 
 const QuotaBanner = () => (
-    <div className="bg-red-800 border-l-4 border-red-500 text-white p-4 mb-6 rounded-r-lg" role="alert">
+    <div className="bg-red-900 border-l-4 border-red-500 text-red-100 p-4 mb-6 rounded-r-lg shadow-lg" role="alert">
         <p className="font-bold">API Limit Reached</p>
-        <p>The daily YouTube API quota has been exceeded. Public video data will not be available until tomorrow.</p>
+        <p className="text-sm">The daily YouTube API quota has been exceeded. Public video data will not be available until tomorrow.</p>
     </div>
 );
 
-// A reusable component for a single row of videos
-const VideoRow = ({ category, videos }) => (
-    <section className="mb-10">
-        <h2 className="text-2xl font-bold text-white mb-4">{category}</h2>
-        <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
-            {videos.map(video => (
-                <VideoCard key={video.videoId} video={video} />
-            ))}
-        </div>
-    </section>
-);
-
 function HomePage() {
-    const [videoRows, setVideoRows] = useState({});
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const { youtubeQuotaExhausted, setYoutubeQuotaExhausted } = useApp();
+    // Use the new hook to get a general feed of trending videos
+    const { videos, loading, hasMore, error, fetchMoreVideos } = useYouTubeInfiniteScroll('latest trending videos');
+    const { youtubeQuotaExhausted } = useApp();
+    const observer = useRef();
 
-    const categories = [
-        "Latest Movie Trailers",
-        "Top Music Videos India",
-        "Tech Reviews",
-        "Live Gaming Streams"
-    ];
-
-    useEffect(() => {
-        const fetchAllCategories = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const requests = categories.map(category => 
-                    axiosClient.get(`/youtube/search?query=${encodeURIComponent(category)}`)
-                );
-                
-                const responses = await Promise.all(requests);
-                
-                const newVideoRows = {};
-                responses.forEach((response, index) => {
-                    newVideoRows[categories[index]] = response.data?.data?.videos || [];
-                });
-                
-                setVideoRows(newVideoRows);
-            } catch (err) {
-                // 3. Check for the specific quota error
-                if (err.response && err.response.status === 429) {
-                    setYoutubeQuotaExhausted(true);
-                } else {
-                    setError("Failed to load content.");
-                }
-                console.error("Failed to fetch videos:", err);
-            } finally {
-                setLoading(false);
+    const lastVideoElementRef = useCallback(node => {
+        if (loading) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore) {
+                fetchMoreVideos();
             }
-        };
+        });
+        if (node) observer.current.observe(node);
+    }, [loading, hasMore, fetchMoreVideos]);
 
-        if (!youtubeQuotaExhausted) { // Don't fetch if we already know the quota is out
-            fetchAllCategories();
-        } else {
-            setLoading(false);
-        }
-    }, []);
-
-    if (loading) {
+    // Show skeletons only on the very first page load
+    if (videos.length === 0 && loading) {
         return (
-            <div>
-                {categories.map(category => (
-                    <div key={category} className="mb-10">
-                        <div className="h-8 w-1/3 bg-gray-700 rounded animate-pulse mb-4"></div>
-                        <div className="flex space-x-4">
-                            {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}
-                        </div>
-                    </div>
-                ))}
+            <div className="p-4">
+                <div className="h-8 w-1/4 bg-gray-700 rounded animate-pulse mb-6"></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+                    {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+                </div>
             </div>
         );
     }
-    
-    if (error) {
-        return <div className="text-center text-red-500 p-8 text-lg">{error}</div>;
-    }
 
     return (
-        <div className="py-6">
+        <div className="p-4">
+            <h1 className="text-3xl font-bold text-white mb-6">Home Feed</h1>
+            
             {youtubeQuotaExhausted && <QuotaBanner />}
-            {Object.entries(videoRows).map(([category, videos]) => (
-                videos.length > 0 && <VideoRow key={category} category={category} videos={videos} />
-            ))}
+            {error && <div className="text-center text-red-500 p-8 text-lg">{error}</div>}
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+                {videos.map((video, index) => {
+                    // Attach the ref to the last video in the list to trigger the next fetch
+                    if (videos.length === index + 1) {
+                        return (
+                            <div ref={lastVideoElementRef} key={video.videoId}>
+                                <VideoCard video={video} />
+                            </div>
+                        );
+                    } else {
+                        return <VideoCard key={video.videoId} video={video} />;
+                    }
+                })}
+            </div>
+
+            {loading && videos.length > 0 && (
+                <div className="text-center text-white py-8">
+                    <p>Loading more...</p>
+                </div>
+            )}
+            
+            {!hasMore && videos.length > 0 && (
+                <div className="text-center text-gray-500 py-8">
+                    <p>You've reached the end.</p>
+                </div>
+            )}
         </div>
     );
 }

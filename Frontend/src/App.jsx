@@ -51,8 +51,8 @@ function App() {
                 {/* --- THE FIX for responsive layout is here --- */}
                 {/* 5. The main content area now uses padding (`pl`) instead of margin (`ml`). */}
                 {/* This allows the grid inside to expand and fill the space. */}
-                <main 
-                    className={`flex-1 transition-all duration-300 ease-in-out overflow-y-auto ${isSidebarOpen ? 'md:pl-64' : 'pl-0'}`}
+                               <main 
+                    className={`flex-1 transition-all duration-300 ease-in-out overflow-y-auto ${isSidebarOpen ? 'md:pl-64' : 'md:pl-20'}`}
                 >
                     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
                         <Outlet />

@@ -56,7 +56,7 @@ function VideoCard({ video }) {
                     <img 
                         src={video.owner?.avatar || placeholderAvatar} 
                         alt={channelName} 
-                        className="w-9 h-9 rounded-full object-cover bg-gray-600 flex-shrink-0 mt-1" // THE FIX: added object-cover
+                        className="w-9 h-9 rounded-full object-cover bg-gray-600 flex-shrink-0 mt-1" 
                     />
                 </Link>
                 <div>

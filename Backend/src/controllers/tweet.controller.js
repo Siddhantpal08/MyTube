@@ -147,27 +147,40 @@ const getUserTweets = asyncHandler(async (req, res) => {
 });
 
 const updateTweet = asyncHandler(async (req, res) => {
-    const { tweetId } = req.params;
-    const { content } = req.body;
- 
-    if (!isValidObjectId(tweetId)) {
-        throw new ApiError(400, "Invalid tweet ID");
-    }
- 
-    const tweet = await Tweet.findById(tweetId);
- 
-    if (!tweet) {
-        throw new ApiError(404, "Tweet not found");
-    }
- 
-    if (tweet.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You can only update your own tweets");
-    }
- 
-    tweet.content = content || tweet.content;
-    const updatedTweet = await tweet.save();
- 
-    return res.status(200).json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"));
+  const { tweetId } = req.params;
+  const { content } = req.body;
+
+  if (!content?.trim()) {
+      throw new ApiError(400, "Content is required");
+  }
+  if (!isValidObjectId(tweetId)) {
+      throw new ApiError(400, "Invalid tweet ID");
+  }
+
+  const tweet = await Tweet.findById(tweetId);
+
+  if (!tweet) {
+      throw new ApiError(404, "Tweet not found");
+  }
+
+  if (tweet.owner.toString() !== req.user._id.toString()) {
+      throw new ApiError(403, "You are not authorized to edit this tweet");
+  }
+
+  // --- THE 15-MINUTE EDIT RULE ---
+  const tweetAgeInMinutes = (Date.now() - new Date(tweet.createdAt).getTime()) / 1000 / 60;
+  if (tweetAgeInMinutes > 15) {
+      throw new ApiError(403, "Tweets can only be edited within 15 minutes of posting.");
+  }
+  // --- END FIX ---
+
+  const updatedTweet = await Tweet.findByIdAndUpdate(
+      tweetId,
+      { $set: { content } },
+      { new : true }
+  ).populate("owner", "username fullName avatar");
+
+  return res.status(200).json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"));
 });
 
 const deleteTweet = asyncHandler(async (req, res) => {

@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
-import ScrollToTopButton from './components-_ScrollToTopButton';
+import ScrollToTopButton from './components/ScrollToTopButton';
 
 function App() {
     const { loading } = useAuth();

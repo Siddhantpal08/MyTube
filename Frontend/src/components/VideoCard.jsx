@@ -21,14 +21,11 @@ function VideoCard({ video }) {
     const videoLink = `/watch/${video._id || video.videoId}`;
     const channelName = video.owner?.username || video.channelTitle;
     const formattedDuration = parseDuration(video.duration);
-
-    // YouTube API provides a channel name but not a link.
-    // Your internal videos have a username that we can link to.
     const isChannelLinkable = !!video.owner?.username;
 
     const handleChannelClick = (e) => {
         if (!isChannelLinkable) {
-            e.preventDefault(); // Don't navigate if it's just a YouTube channel title
+            e.preventDefault();
             return;
         }
         e.preventDefault(); 
@@ -52,13 +49,21 @@ function VideoCard({ video }) {
                 </div>
             </Link>
             <div className="mt-2 flex items-start space-x-3">
-                <Link to={isChannelLinkable ? `/channel/${video.owner.username}` : '#'} onClick={handleChannelClick}>
-                <img 
-                        src={video.owner?.avatar || placeholderAvatar} 
-                        alt={channelName}
-                        className="w-9 h-9 channel-avatar bg-gray-600 flex-shrink-0 mt-1" 
-                    />
+
+                {/* --- THE FINAL FIX IS HERE --- */}
+                <Link to={isChannelLinkable ? `/channel/${video.owner.username}` : '#'} onClick={handleChannelClick} className="flex-shrink-0 mt-1">
+                    {/* 1. This DIV is the circular frame. It cannot be distorted. */}
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-600">
+                        <img 
+                            src={video.owner?.avatar || placeholderAvatar} 
+                            alt={channelName}
+                            // 2. This IMG fills the frame.
+                            className="w-full h-full object-cover" 
+                        />
+                    </div>
                 </Link>
+                {/* --- END FIX --- */}
+
                 <div>
                     <Link to={videoLink}>
                         <h3 className="text-white font-semibold text-md overflow-hidden text-ellipsis h-12" title={video.title}>

@@ -83,19 +83,19 @@ function Register() {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             
-            // Step 2: Automatically log the user in after a successful registration
+            // Step 2: Automatically log the user in
             const loginResponse = await axiosClient.post('/users/login', { 
                 email: formData.email, 
                 password: formData.password 
             });
             const { user, accessToken } = loginResponse.data.data;
-            login(user, accessToken); // This updates your AuthContext
+            login(user, accessToken);
 
             toast.success(`Welcome to MyTube, ${user.username}!`, { id: toastId });
-            navigate('/'); // Redirect to the homepage
+            navigate('/');
 
         } catch (err) {
-            const errorMessage = err.response?.data?.message || "Registration failed. Please check the details and try again.";
+            const errorMessage = err.response?.data?.message || "Registration failed. Please try again.";
             setError(errorMessage);
             toast.error(errorMessage, { id: toastId });
         } finally {

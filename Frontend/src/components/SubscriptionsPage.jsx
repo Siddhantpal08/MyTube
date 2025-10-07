@@ -60,7 +60,6 @@ function SubscriptionsPage() {
     }, [user?._id]);
     
     if (loading) {
-        // A more detailed skeleton loader for a better user experience
         return (
             <div className="p-4 animate-pulse">
                 <div className="h-8 w-1/3 bg-gray-800 rounded-lg mb-6"></div>

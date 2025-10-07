@@ -7,67 +7,51 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 12, query, sortBy, sortType, userId } = req.query;
+    const { page = 1, limit = 12, query, sortBy, sortType, userId, username } = req.query;
 
     const pipeline = [];
+    const match = {};
 
-    // Match videos by a text query if provided
-    if (query) {
-        pipeline.push({
-            $search: {
-                index: "search-videos", // Assuming you have a search index on Atlas
-                text: { query: query, path: ["title", "description"] }
-            }
-        });
-    }
-
-    // Match videos by a specific user if userId is provided
-    if (userId) {
+    // --- THIS IS THE FIX ---
+    // If a username is provided (from the ChannelPage), find the user's ID first.
+    if (username) {
+        const user = await User.findOne({ username: username.toLowerCase() });
+        if (user) {
+            match.owner = user._id;
+        } else {
+            // If user not found, return empty results immediately.
+            return res.status(200).json(new ApiResponse(200, { docs: [] }, "No videos found for this user"));
+        }
+    } else if (userId) {
+        // If a userId is provided, use it directly.
         if (!isValidObjectId(userId)) throw new ApiError(400, "Invalid userId");
-        pipeline.push({ $match: { owner: new mongoose.Types.ObjectId(userId) } });
+        match.owner = new mongoose.Types.ObjectId(userId);
     }
+    // --- END FIX ---
 
-    // --- THE FIX: This stage joins the user data to each video ---
+    if (Object.keys(match).length > 0) {
+        pipeline.push({ $match: match });
+    }
+    
+    // This pipeline stage is crucial for getting the owner's details.
     pipeline.push({
         $lookup: {
             from: "users",
             localField: "owner",
             foreignField: "_id",
             as: "ownerDetails",
-            pipeline: [
-                {
-                    $project: {
-                        username: 1,
-                        avatar: 1,
-                    },
-                },
-            ],
-        },
+            pipeline: [ { $project: { username: 1, avatar: 1 } } ]
+        }
     });
-
-    pipeline.push({
-        $addFields: {
-            owner: {
-                $first: "$ownerDetails",
-            },
-        },
-    });
+    pipeline.push({ $addFields: { owner: { $first: "$ownerDetails" } } });
+    pipeline.push({ $project: { ownerDetails: 0 } }); // Clean up
 
     const sortStage = {};
-    if (sortBy && sortType) {
-        sortStage[sortBy] = sortType === 'asc' ? 1 : -1;
-        pipeline.push({ $sort: sortStage });
-    } else {
-        pipeline.push({ $sort: { createdAt: -1 } });
-    }
+    sortStage[sortBy || 'createdAt'] = sortType === 'asc' ? 1 : -1;
+    pipeline.push({ $sort: sortStage });
 
     const videoAggregate = Video.aggregate(pipeline);
-    
-    const options = {
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
-    };
-
+    const options = { page: parseInt(page, 10), limit: parseInt(limit, 10) };
     const videos = await Video.aggregatePaginate(videoAggregate, options);
 
     return res.status(200).json(new ApiResponse(200, videos, "Videos fetched successfully"));

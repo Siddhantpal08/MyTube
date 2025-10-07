@@ -1,6 +1,5 @@
-// --- THE FIX IS ON THIS LINE ---
 import React, { useState, useEffect } from 'react';
-import { useParams, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, NavLink, Link, useLocation } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from '../components/VideoCard';
 import { useAuth } from '../Context/AuthContext';
@@ -10,16 +9,13 @@ import ChannelAboutTab from './ChannelAboutTab';
 
 function ChannelPage() {
     const { username } = useParams();
-    const { user, isAuthenticated } = useAuth();
-    const navigate = useNavigate();
+    const { user, isAuthenticated, navigate } = useAuth();
     const [channel, setChannel] = useState(null);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
     const [isSubscribed, setIsSubscribed] = useState(false);
     const [subscribersCount, setSubscribersCount] = useState(0);
-    
     const location = useLocation();
     const activeTab = location.pathname.split('/').pop() === 'about' ? 'about' : 'videos';
 
@@ -27,25 +23,18 @@ function ChannelPage() {
         const fetchChannelData = async () => {
             if (!username) return;
             setLoading(true);
-            setError(null);
             try {
-                // Fetch channel profile and videos in parallel for much faster loading
                 const [channelRes, videosRes] = await Promise.all([
                     axiosClient.get(`/users/c/${username}`),
                     axiosClient.get(`/videos?username=${username}`)
                 ]);
-
                 const channelData = channelRes.data.data;
                 setChannel(channelData);
                 setVideos(videosRes.data.data.docs || []);
-                
-                // Set initial subscription state from the fetched data
                 setSubscribersCount(channelData.subscribersCount);
                 setIsSubscribed(channelData.isSubscribed);
-
             } catch (err) {
-                console.error("Failed to fetch channel data:", err);
-                setError(err.response?.data?.message || "Could not load the channel.");
+                setError(err.response?.data?.message || "Could not load channel.");
             } finally {
                 setLoading(false);
             }
@@ -53,42 +42,27 @@ function ChannelPage() {
         fetchChannelData();
     }, [username, isAuthenticated]);
 
-    const handleToggleSubscription = async () => {
-        if (!isAuthenticated) {
-            toast.error("Please log in to subscribe.");
-            return navigate("/login");
-        }
-        
-        // Optimistic UI update for instant feedback
-        const originalSubState = isSubscribed;
-        setIsSubscribed(prev => !prev);
-        setSubscribersCount(prev => originalSubState ? prev - 1 : prev + 1);
-
-        try {
-            await axiosClient.post(`/subscriptions/c/${channel._id}`);
-        } catch (error) {
-            // If the API call fails, revert the UI to the original state
-            setIsSubscribed(originalSubState);
-            setSubscribersCount(prev => originalSubState ? prev + 1 : prev - 1);
-            toast.error("Failed to update subscription.");
-        }
-    };
+    // ... (your handleToggleSubscription function is fine) ...
 
     if (loading) return <div className="p-8 text-center text-white">Loading channel...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
     const isOwner = user?._id === channel?._id;
+    
+    // --- MIXED CONTENT FIX ---
+    const secureCoverImage = channel.coverImage ? channel.coverImage.replace('http://', 'https://') : null;
+    const secureAvatar = channel.avatar ? channel.avatar.replace('http://', 'https') : placeholderAvatar;
 
     return (
         <div>
             {/* --- Channel Header --- */}
             <div className="w-full">
-                <div className="h-40 md:h-52 bg-gray-700">
-                    {channel.coverImage && <img src={channel.coverImage.replace('http://', 'https://')} alt="Cover" className="w-full h-full object-cover" />}
+                <div className="h-40 md:h-52 w-full bg-gray-700">
+                    {secureCoverImage && <img src={secureCoverImage} alt="Cover" className="w-full h-full object-cover" />}
                 </div>
-                <div className="px-4 sm:px-6 lg:px-8 bg-[#121212] py-4">
+                <div className="p-4 sm:p-6 bg-[#121212]">
                     <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20">
-                        <img src={channel.avatar.replace('http://', 'https://') || placeholderAvatar} alt={channel.username} className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[#121212]" />
+                        <img src={secureAvatar} alt={channel.username} className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[#121212]" />
                         <div className="ml-4 mt-4 sm:mt-0 flex-1">
                             <h1 className="text-2xl sm:text-3xl font-bold text-white">{channel.fullName}</h1>
                             <div className="flex items-center space-x-3 text-sm text-gray-400">
@@ -96,43 +70,33 @@ function ChannelPage() {
                                 <span>{formatCompactNumber(subscribersCount)} subscribers</span>
                             </div>
                         </div>
-                        {isOwner ? (
-                             <Link to="/account/edit" className="font-bold py-2 px-5 rounded-full bg-gray-600 hover:bg-gray-500 transition-colors">Edit Channel</Link>
-                        ) : isAuthenticated && (
-                            <button
-                                onClick={handleToggleSubscription}
-                                className={`font-bold py-2 px-5 rounded-full transition-colors duration-200 ${isSubscribed ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600 hover:bg-red-700'}`}
-                            >
-                                {isSubscribed ? 'Subscribed' : 'Subscribe'}
-                            </button>
-                        )}
+                        {/* ... (subscribe/edit buttons) ... */}
                     </div>
                 </div>
             </div>
 
             {/* --- Channel Navigation Tabs --- */}
-            <div className="border-b border-gray-700 mt-4 px-4 sm:px-6 lg:px-8">
+            <div className="border-b border-gray-700 mt-2 px-4 sm:px-6">
                 <nav className="flex space-x-4">
                     <NavLink to={`/channel/${username}`} end className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-white border-white' : 'text-gray-400 border-transparent hover:text-white'}`}>Videos</NavLink>
                     <NavLink to={`/channel/${username}/about`} className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-white border-white' : 'text-gray-400 border-transparent hover:text-white'}`}>About</NavLink>
                 </nav>
             </div>
             
-            {/* --- Tab Content --- */}
+            {/* --- Tab Content with Less Congested Layout --- */}
             {activeTab === 'videos' && (
-                <div className="p-4 sm:p-6 lg:p-8">
+                <div className="p-4 sm:p-6">
                     {videos.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-6 gap-y-10">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
                             {videos.map(video => <VideoCard key={video._id} video={video} />)}
                         </div>
                     ) : (
                         <div className="text-center text-gray-400 py-16">
-                            <h2 className="text-xl font-semibold">No videos yet.</h2>
+                            <h2 className="text-xl font-semibold">No videos have been uploaded.</h2>
                         </div>
                     )}
                 </div>
             )}
-
             {activeTab === 'about' && <ChannelAboutTab channel={channel} />}
         </div>
     );

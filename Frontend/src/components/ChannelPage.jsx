@@ -50,7 +50,7 @@ function ChannelPage() {
             }
         };
         fetchChannelData();
-    }, [username, isAuthenticated]); // Re-fetch data if the username or login state changes
+    }, [username, isAuthenticated]);
 
     const handleToggleSubscription = async () => {
         if (!isAuthenticated) {

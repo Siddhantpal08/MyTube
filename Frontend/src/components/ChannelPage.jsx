@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, NavLink, Link, useLocation } from 'react-router-dom';
+import { useParams, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from '../components/VideoCard';
 import { useAuth } from '../Context/AuthContext';
@@ -9,13 +9,16 @@ import ChannelAboutTab from './ChannelAboutTab';
 
 function ChannelPage() {
     const { username } = useParams();
-    const { user, isAuthenticated, navigate } = useAuth();
+    const { user, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
     const [channel, setChannel] = useState(null);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
     const [isSubscribed, setIsSubscribed] = useState(false);
     const [subscribersCount, setSubscribersCount] = useState(0);
+    
     const location = useLocation();
     const activeTab = location.pathname.split('/').pop() === 'about' ? 'about' : 'videos';
 
@@ -25,10 +28,9 @@ function ChannelPage() {
             setLoading(true);
             setError(null);
             try {
-                // Fetch channel profile and videos in parallel for faster loading
                 const [channelRes, videosRes] = await Promise.all([
                     axiosClient.get(`/users/c/${username}`),
-                    axiosClient.get(`/videos?username=${username}`) // This now correctly filters videos
+                    axiosClient.get(`/videos?username=${username}`)
                 ]);
 
                 const channelData = channelRes.data.data;
@@ -47,13 +49,31 @@ function ChannelPage() {
         fetchChannelData();
     }, [username, isAuthenticated]);
 
-    // ... (your handleToggleSubscription function is fine) ...
+    // --- THIS IS THE MISSING FUNCTION ---
+    const handleToggleSubscription = async () => {
+        if (!isAuthenticated) {
+            toast.error("Please log in to subscribe.");
+            return navigate("/login");
+        }
+        
+        const originalSubState = isSubscribed;
+        setIsSubscribed(prev => !prev);
+        setSubscribersCount(prev => originalSubState ? prev - 1 : prev + 1);
+
+        try {
+            await axiosClient.post(`/subscriptions/c/${channel._id}`);
+        } catch (error) {
+            setIsSubscribed(originalSubState);
+            setSubscribersCount(prev => originalSubState ? prev + 1 : prev - 1);
+            toast.error("Failed to update subscription.");
+        }
+    };
 
     if (loading) return <div className="p-8 text-center text-white">Loading channel...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
+    if (!channel) return <div className="p-8 text-center text-gray-400">Channel not found.</div>;
 
-    // --- THE FIX: isOwner check is now more robust ---
-    const isOwner = user?._id === channel?._id;
+    const isOwner = user?._id === channel._id;
     
     const secureCoverImage = channel.coverImage ? channel.coverImage.replace('http://', 'https://') : null;
     const secureAvatar = channel.avatar ? channel.avatar.replace('http://', 'https://') : placeholderAvatar;
@@ -62,7 +82,7 @@ function ChannelPage() {
         <div>
             {/* --- Channel Header --- */}
             <div className="w-full">
-                <div className="h-40 md:h-52 w-full bg-gray-700">
+                <div className="h-40 md:h-52 bg-gray-700">
                     {secureCoverImage && <img src={secureCoverImage} alt="Cover" className="w-full h-full object-cover" />}
                 </div>
                 <div className="px-4 sm:px-6 lg:px-8 bg-[#121212] py-4">
@@ -97,7 +117,7 @@ function ChannelPage() {
                 </nav>
             </div>
             
-            {/* --- Tab Content with Less Congested Layout --- */}
+            {/* --- Tab Content --- */}
             {activeTab === 'videos' && (
                 <div className="p-4 sm:p-6">
                     {videos.length > 0 ? (
@@ -111,6 +131,7 @@ function ChannelPage() {
                     )}
                 </div>
             )}
+
             {activeTab === 'about' && <ChannelAboutTab channel={channel} />}
         </div>
     );

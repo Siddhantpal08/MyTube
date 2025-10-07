@@ -1,89 +1,100 @@
-import mongoose from "mongoose"
-import { User } from "../models/user.model.js"
-import { Subscription } from "../models/subscription.model.js"
-import { ApiError } from "../utils/ApiError.js"
-import { ApiResponse } from "../utils/ApiResponse.js"
-import { asyncHandler } from "../utils/asyncHandler.js"
+import mongoose, { isValidObjectId } from "mongoose";
+import { User } from "../models/user.model.js";
+import { Subscription } from "../models/subscription.model.js";
+import { Video } from "../models/video.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
+// Controller to toggle a subscription on or off
 const toggleSubscription = asyncHandler(async (req, res) => {
     const { channelId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(channelId)) {
+    if (!isValidObjectId(channelId)) {
         throw new ApiError(400, "Invalid channel ID");
     }
 
-    const channel = await User.findById(channelId)
-    if (!channel) {
-        throw new ApiError(404, "Channel not found");
-    }
-
-    const existingSubscription = await Subscription.findOne({
+    const subscription = await Subscription.findOne({
+        subscriber: req.user._id,
         channel: channelId,
-        subscriber: req.user._id
     });
 
-    if (existingSubscription) {
-        await existingSubscription.deleteOne();
-        return res
-            .status(200)
-            .json(new ApiResponse(200, {}, "Subscription removed"));
+    if (subscription) {
+        await Subscription.findByIdAndDelete(subscription._id);
+    } else {
+        await Subscription.create({
+            subscriber: req.user._id,
+            channel: channelId,
+        });
     }
 
-    const newSubscription = await Subscription.create({
-        channel: channelId,
-        subscriber: req.user._id
-    });
+    const subscribersCount = await Subscription.countDocuments({ channel: channelId });
+    const isSubscribed = !subscription;
 
-    return res
-        .status(201)
-        .json(new ApiResponse(201, newSubscription, "Channel subscribed successfully"));
-})
+    return res.status(200).json(
+        new ApiResponse(200, { isSubscribed, subscribersCount }, "Subscription toggled successfully")
+    );
+});
 
-
-const getUserChannelSubscribers = asyncHandler(async (req, res) => {
-    const { channelId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(channelId)) {
-        throw new ApiError(400, "Invalid channel ID")
-    }
-
-    const subscribers = await Subscription.find({ channel: channelId })
-        .populate("subscriber", "username fullName avatar")
-
-    return res
-        .status(200)
-        .json(new ApiResponse(200, subscribers, "Fetched subscribers successfully"))
-})
-
-const getSubscribedChannels = asyncHandler(async (req, res) => {
+// Controller to get the list of channels a user is subscribed to (for the Subscriptions page)
+const getUserSubscribedChannels = asyncHandler(async (req, res) => {
     const { subscriberId } = req.params;
+    if (!isValidObjectId(subscriberId)) {
+        throw new ApiError(400, "Invalid subscriber ID");
+    }
+    const subscriptions = await Subscription.find({ subscriber: subscriberId }).populate("channel", "username fullName avatar");
+    return res.status(200).json(new ApiResponse(200, subscriptions, "Subscribed channels fetched successfully"));
+});
 
-    if (!mongoose.Types.ObjectId.isValid(subscriberId)) {
-        throw new ApiError(400, "Invalid subscriber ID")
+// Controller to get the latest videos from all subscribed channels
+const getSubscribedVideos = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 12 } = req.query;
+    const userId = req.user._id;
+
+    const subscriptions = await Subscription.find({ subscriber: userId });
+    const channelIds = subscriptions.map(sub => sub.channel);
+
+    if (channelIds.length === 0) {
+        return res.status(200).json(new ApiResponse(200, { docs: [], totalDocs: 0 }, "User is not subscribed to any channels"));
     }
 
-    const subscriptions = await Subscription.find({ subscriber: subscriberId })
-        .populate("channel", "username fullName avatar -_id") // exclude _id if you want
+    const videoAggregate = Video.aggregate([
+        { $match: { owner: { $in: channelIds } } },
+        { $sort: { createdAt: -1 } },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    { $project: { username: 1, avatar: 1, fullName: 1 } }
+                ]
+            }
+        },
+        { $addFields: { owner: { $first: "$owner" } } }
+    ]);
+    
+    const options = { page: parseInt(page, 10), limit: parseInt(limit, 10) };
+    const videos = await Video.aggregatePaginate(videoAggregate, options);
+    
+    return res.status(200).json(new ApiResponse(200, videos, "Subscribed videos fetched successfully"));
+});
 
-    const channelList = subscriptions.map(sub => sub.channel);
-
-    return res
-        .status(200)
-        .json(new ApiResponse(200, channelList, "Fetched subscriptions successfully"))
-})
+// --- THIS FUNCTION HAS BEEN RESTORED ---
+// Controller to get the subscription status and count for a single channel
 const getSubscriptionStatus = asyncHandler(async (req, res) => {
     const { channelId } = req.params;
     const userId = req.user?._id;
 
-    if (!channelId) {
-        throw new ApiError(400, "Channel ID is required");
+    if (!isValidObjectId(channelId)) {
+        throw new ApiError(400, "Invalid Channel ID");
     }
 
     const subscribersCount = await Subscription.countDocuments({ channel: channelId });
 
     // If the user isn't logged in, they can't be subscribed
     if (!userId) {
-        return res.status(200).json(new ApiResponse(200, { isSubscribed: false, subscribersCount }, "Subscription status fetched"));
+        return res.status(200).json(new ApiResponse(200, { isSubscribed: false, subscribersCount }, "Subscription status fetched for guest"));
     }
 
     const subscription = await Subscription.findOne({
@@ -91,14 +102,15 @@ const getSubscriptionStatus = asyncHandler(async (req, res) => {
         channel: channelId,
     });
 
-    const isSubscribed = !!subscription; // Convert to boolean (true if found, false if not)
+    const isSubscribed = !!subscription; // Convert to boolean
 
     return res.status(200).json(new ApiResponse(200, { isSubscribed, subscribersCount }, "Subscription status fetched successfully"));
 });
 
+
 export {
     toggleSubscription,
-    getUserChannelSubscribers,
-    getSubscribedChannels,
+    getUserSubscribedChannels,
+    getSubscribedVideos,
     getSubscriptionStatus
-}
+};

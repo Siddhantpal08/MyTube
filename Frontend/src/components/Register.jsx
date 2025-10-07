@@ -78,21 +78,15 @@ function Register() {
         if (coverImage) submissionData.append("coverImage", coverImage);
 
         try {
-            // Step 1: Register the user
-            await axiosClient.post('/users/register', submissionData, {
+            const response = await axiosClient.post('/users/register', submissionData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             
-            // Step 2: Automatically log the user in
-            const loginResponse = await axiosClient.post('/users/login', { 
-                email: formData.email, 
-                password: formData.password 
-            });
-            const { user, accessToken } = loginResponse.data.data;
-            login(user, accessToken);
+            const { user, accessToken } = response.data.data;
+            login(user, accessToken); // This updates your AuthContext
 
             toast.success(`Welcome to MyTube, ${user.username}!`, { id: toastId });
-            navigate('/');
+            navigate('/'); // Redirect to the homepage
 
         } catch (err) {
             const errorMessage = err.response?.data?.message || "Registration failed. Please try again.";

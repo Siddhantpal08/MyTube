@@ -1,5 +1,6 @@
+// --- THE FIX IS ON THIS LINE ---
 import React, { useState, useEffect } from 'react';
-import { useParams, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from '../components/VideoCard';
 import { useAuth } from '../Context/AuthContext';
@@ -83,11 +84,11 @@ function ChannelPage() {
             {/* --- Channel Header --- */}
             <div className="w-full">
                 <div className="h-40 md:h-52 bg-gray-700">
-                    {channel.coverImage && <img src={channel.coverImage} alt="Cover" className="w-full h-full object-cover" />}
+                    {channel.coverImage && <img src={channel.coverImage.replace('http://', 'https://')} alt="Cover" className="w-full h-full object-cover" />}
                 </div>
                 <div className="px-4 sm:px-6 lg:px-8 bg-[#121212] py-4">
                     <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20">
-                        <img src={channel.avatar || placeholderAvatar} alt={channel.username} className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[#121212]" />
+                        <img src={channel.avatar.replace('http://', 'https://') || placeholderAvatar} alt={channel.username} className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[#121212]" />
                         <div className="ml-4 mt-4 sm:mt-0 flex-1">
                             <h1 className="text-2xl sm:text-3xl font-bold text-white">{channel.fullName}</h1>
                             <div className="flex items-center space-x-3 text-sm text-gray-400">

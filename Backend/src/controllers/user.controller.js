@@ -141,13 +141,15 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 });
 
 // --- Channel & Profile Controllers ---
-
 const getUserChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params;
 
     if (!username?.trim()) {
         throw new ApiError(400, "Username is missing");
     }
+
+    // THE FIX: Get the logged-in user's ID safely. It will be 'undefined' for guests.
+    const loggedInUserId = req.user?._id;
 
     // This is a more robust aggregation pipeline to fetch the channel profile.
     const channel = await User.aggregate([
@@ -167,14 +169,10 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         {
             $addFields: {
                 subscribersCount: { $size: "$subscribers" },
-                // THE FIX: This condition is now safe for guests (when req.user is undefined)
-                isSubscribed: {
-                    $cond: {
-                        if: { $toBool: req.user?._id }, // Check if a user is logged in
-                        then: { $in: [req.user._id, "$subscribers.subscriber"] },
-                        else: false // If not logged in, they can't be subscribed
-                    }
-                }
+                // This condition is now safe for guests because 'loggedInUserId' is checked first.
+                isSubscribed: loggedInUserId
+                    ? { $in: [new mongoose.Types.ObjectId(loggedInUserId), "$subscribers.subscriber"] }
+                    : false
             }
         },
         {

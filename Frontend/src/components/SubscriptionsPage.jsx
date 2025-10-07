@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import VideoCard from './VideoCard';
 import SkeletonCard from './SkeletonCard';
 
-// New, attractive ChannelCard that is clickable and shows the channel's avatar
+// New, attractive ChannelCard that is clickable
 const ChannelCard = ({ channel }) => (
     <Link to={`/channel/${channel.username}`} className="flex flex-col items-center space-y-2 group flex-shrink-0 w-28 text-center">
         <img 

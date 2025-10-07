@@ -6,7 +6,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-// Controller to toggle a subscription on or off
+// Controller to toggle a subscription on or off for the logged-in user
 const toggleSubscription = asyncHandler(async (req, res) => {
     const { channelId } = req.params;
     if (!isValidObjectId(channelId)) {
@@ -27,6 +27,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
         });
     }
 
+    // Return the new subscription state and count for instant UI updates
     const subscribersCount = await Subscription.countDocuments({ channel: channelId });
     const isSubscribed = !subscription;
 
@@ -35,21 +36,23 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     );
 });
 
-// Controller to get the list of channels a user is subscribed to (for the Subscriptions page)
+// Controller to get the list of channels a specific user is subscribed to
 const getUserSubscribedChannels = asyncHandler(async (req, res) => {
     const { subscriberId } = req.params;
     if (!isValidObjectId(subscriberId)) {
         throw new ApiError(400, "Invalid subscriber ID");
     }
+    // Find subscriptions and populate the 'channel' field with user details
     const subscriptions = await Subscription.find({ subscriber: subscriberId }).populate("channel", "username fullName avatar");
     return res.status(200).json(new ApiResponse(200, subscriptions, "Subscribed channels fetched successfully"));
 });
 
-// Controller to get the latest videos from all subscribed channels
+// Controller to get the latest videos from all channels the logged-in user is subscribed to
 const getSubscribedVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 12 } = req.query;
     const userId = req.user._id;
 
+    // 1. Find all channels the user is subscribed to
     const subscriptions = await Subscription.find({ subscriber: userId });
     const channelIds = subscriptions.map(sub => sub.channel);
 
@@ -57,11 +60,16 @@ const getSubscribedVideos = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200, { docs: [], totalDocs: 0 }, "User is not subscribed to any channels"));
     }
 
+    // 2. Find all videos where the owner's ID is in the list of subscribed channel IDs
     const videoAggregate = Video.aggregate([
-        { $match: { owner: { $in: channelIds } } },
+        {
+            $match: {
+                owner: { $in: channelIds }
+            }
+        },
         { $sort: { createdAt: -1 } },
         {
-            $lookup: {
+            $lookup: { // Join with the users collection to get owner details
                 from: "users",
                 localField: "owner",
                 foreignField: "_id",
@@ -71,7 +79,11 @@ const getSubscribedVideos = asyncHandler(async (req, res) => {
                 ]
             }
         },
-        { $addFields: { owner: { $first: "$owner" } } }
+        {
+            $addFields: {
+                owner: { $first: "$owner" } // Unwind the owner array
+            }
+        }
     ]);
     
     const options = { page: parseInt(page, 10), limit: parseInt(limit, 10) };
@@ -80,11 +92,10 @@ const getSubscribedVideos = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, videos, "Subscribed videos fetched successfully"));
 });
 
-// --- THIS FUNCTION HAS BEEN RESTORED ---
 // Controller to get the subscription status and count for a single channel
 const getSubscriptionStatus = asyncHandler(async (req, res) => {
     const { channelId } = req.params;
-    const userId = req.user?._id;
+    const userId = req.user?._id; // Safely get the user ID for guests
 
     if (!isValidObjectId(channelId)) {
         throw new ApiError(400, "Invalid Channel ID");

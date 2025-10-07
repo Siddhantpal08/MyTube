@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, NavLink, useLocation } from 'react-router-dom';
+// --- THE FIX IS ON THIS LINE ---
+import { useParams, NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from '../components/VideoCard';
 import { useAuth } from '../Context/AuthContext';
 import toast from 'react-hot-toast';
 import { formatCompactNumber, placeholderAvatar } from '../utils/formatters';
-import ChannelAboutTab from './ChannelAboutTab'; // Assuming you have this component
+import ChannelAboutTab from './ChannelAboutTab';
 
 function ChannelPage() {
     const { username } = useParams();
-    const { user, isAuthenticated, navigate } = useAuth(); // Assuming navigate is from your context
+    const { user, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
     const [channel, setChannel] = useState(null);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -17,6 +19,9 @@ function ChannelPage() {
 
     const [isSubscribed, setIsSubscribed] = useState(false);
     const [subscribersCount, setSubscribersCount] = useState(0);
+    
+    const location = useLocation();
+    const activeTab = location.pathname.split('/').pop() === 'about' ? 'about' : 'videos';
 
     useEffect(() => {
         const fetchChannelData = async () => {
@@ -24,21 +29,17 @@ function ChannelPage() {
             setLoading(true);
             setError(null);
             try {
-                // Fetch channel profile and videos in parallel for much faster loading
                 const [channelRes, videosRes] = await Promise.all([
                     axiosClient.get(`/users/c/${username}`),
                     axiosClient.get(`/videos?username=${username}`)
                 ]);
 
                 const channelData = channelRes.data.data;
-                if (channelData) {
-                    setChannel(channelData);
-                    setVideos(videosRes.data.data.docs || []);
-                    setSubscribersCount(channelData.subscribersCount);
-                    setIsSubscribed(channelData.isSubscribed);
-                } else {
-                    throw new Error("Channel not found");
-                }
+                setChannel(channelData);
+                setVideos(videosRes.data.data.docs || []);
+                setSubscribersCount(channelData.subscribersCount);
+                setIsSubscribed(channelData.isSubscribed);
+
             } catch (err) {
                 console.error("Failed to fetch channel data:", err);
                 setError(err.response?.data?.message || "Could not load the channel.");
@@ -65,9 +66,6 @@ function ChannelPage() {
         }
     };
 
-    const location = useLocation();
-    const activeTab = location.pathname.split('/').pop() === 'about' ? 'about' : 'videos';
-
     if (loading) return <div className="p-8 text-center text-white">Loading channel...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
     if (!channel) return <div className="p-8 text-center text-gray-400">Channel not found.</div>;
@@ -76,7 +74,7 @@ function ChannelPage() {
 
     return (
         <div>
-            {/* --- Channel Header with Cover Image --- */}
+            {/* --- Channel Header --- */}
             <div className="w-full">
                 <div className="h-40 md:h-52 bg-gray-700">
                     {channel.coverImage && <img src={channel.coverImage} alt="Cover" className="w-full h-full object-cover" />}
@@ -91,7 +89,9 @@ function ChannelPage() {
                                 <span>{formatCompactNumber(subscribersCount)} subscribers</span>
                             </div>
                         </div>
-                        {!isOwner && isAuthenticated && (
+                        {isOwner ? (
+                             <Link to="/account/edit" className="font-bold py-2 px-5 rounded-full bg-gray-600 hover:bg-gray-500 transition-colors">Edit Channel</Link>
+                        ) : isAuthenticated && (
                             <button
                                 onClick={handleToggleSubscription}
                                 className={`font-bold py-2 px-5 rounded-full transition-colors duration-200 ${isSubscribed ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600 hover:bg-red-700'}`}
@@ -121,7 +121,6 @@ function ChannelPage() {
                     ) : (
                         <div className="text-center text-gray-400 py-16">
                             <h2 className="text-xl font-semibold">No videos yet.</h2>
-                            {isOwner && <p className="mt-2">This channel hasn't uploaded any videos.</p>}
                         </div>
                     )}
                 </div>

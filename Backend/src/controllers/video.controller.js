@@ -7,54 +7,63 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 
+// Helper function to make a URL secure
+const secureUrl = (url) => {
+    if (url && url.startsWith('http://')) {
+        return url.replace('http://', 'https://');
+    }
+    return url;
+};
+
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 12, query, sortBy, sortType, userId, username } = req.query;
+    const { page = 1, limit = 12, userId, username } = req.query;
 
     const pipeline = [];
     const match = {};
 
-    // --- THIS IS THE FIX ---
-    // If a username is provided (from the ChannelPage), find that user's ID first.
     if (username) {
         const user = await User.findOne({ username: username.toLowerCase() });
-        if (user) {
-            match.owner = user._id; // Filter videos by this owner's ID
-        } else {
-            return res.status(200).json(new ApiResponse(200, { docs: [] }, "No videos found for this user"));
-        }
+        if (user) match.owner = user._id;
+        else return res.status(200).json(new ApiResponse(200, { docs: [] }, "User not found"));
     } else if (userId) {
         if (!isValidObjectId(userId)) throw new ApiError(400, "Invalid userId");
         match.owner = new mongoose.Types.ObjectId(userId);
     }
-    // --- END FIX ---
 
-    if (Object.keys(match).length > 0) {
+    if (Object.keys(match).length) {
         pipeline.push({ $match: match });
     }
+    
+    pipeline.push({ $sort: { createdAt: -1 } });
     
     pipeline.push({
         $lookup: {
             from: "users",
             localField: "owner",
             foreignField: "_id",
-            as: "ownerDetails",
-            pipeline: [ { $project: { username: 1, avatar: 1 } } ]
+            as: "owner",
+            pipeline: [
+                { $project: { username: 1, avatar: 1, fullName: 1 } }
+            ]
         }
     });
-    pipeline.push({ $addFields: { owner: { $first: "$ownerDetails" } } });
-    pipeline.push({ $project: { ownerDetails: 0 } });
-
-    const sortStage = {};
-    sortStage[sortBy || 'createdAt'] = sortType === 'asc' ? 1 : -1;
-    pipeline.push({ $sort: sortStage });
+    pipeline.push({ $addFields: { owner: { $first: "$owner" } } });
 
     const videoAggregate = Video.aggregate(pipeline);
     const options = { page: parseInt(page, 10), limit: parseInt(limit, 10) };
     const videos = await Video.aggregatePaginate(videoAggregate, options);
 
+    // --- THE FIX: Secure all URLs before sending the response ---
+    videos.docs.forEach(video => {
+        video.thumbnail = secureUrl(video.thumbnail);
+        video.videofile = secureUrl(video.videofile);
+        if (video.owner) {
+            video.owner.avatar = secureUrl(video.owner.avatar);
+        }
+    });
+
     return res.status(200).json(new ApiResponse(200, videos, "Videos fetched successfully"));
 });
-
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body;

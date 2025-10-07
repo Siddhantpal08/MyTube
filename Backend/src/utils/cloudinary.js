@@ -9,29 +9,20 @@ cloudinary.config({
     secure: true // This is the crucial line for all new uploads
 });
 
-/**
- * Uploads a file to Cloudinary from a local path.
- * @param {string} localFilePath - The local path to the file to upload.
- * @returns {object | null} The Cloudinary response object or null if the upload fails.
- */
 const uploadOnCloudinary = async (localFilePath) => {
     try {
         if (!localFilePath) return null;
         
-        // Upload the file to Cloudinary, letting it automatically detect the resource type.
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type: "auto",
         });
 
-        // File has been uploaded successfully, now remove the local temporary copy.
         if (fs.existsSync(localFilePath)) {
             fs.unlinkSync(localFilePath);
         }
         return response;
 
     } catch (error) {
-        // If an error occurs during upload, make sure to safely remove the local file.
-        // This 'existsSync' check prevents a server crash if the file was already removed.
         if (fs.existsSync(localFilePath)) {
             fs.unlinkSync(localFilePath);
         }

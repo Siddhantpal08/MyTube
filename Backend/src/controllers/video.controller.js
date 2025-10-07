@@ -13,17 +13,17 @@ const getAllVideos = asyncHandler(async (req, res) => {
     const match = {};
 
     // --- THIS IS THE FIX ---
-    // If a username is provided (from the ChannelPage), find the user's ID first.
+    // If a username is provided (from the ChannelPage), find that user's ID first.
     if (username) {
         const user = await User.findOne({ username: username.toLowerCase() });
         if (user) {
-            match.owner = user._id;
+            match.owner = user._id; // Filter videos by this owner's ID
         } else {
-            // If user not found, return empty results immediately.
+            // If the user is not found, return empty results immediately.
             return res.status(200).json(new ApiResponse(200, { docs: [] }, "No videos found for this user"));
         }
     } else if (userId) {
-        // If a userId is provided, use it directly.
+        // If a userId is provided directly, use it.
         if (!isValidObjectId(userId)) throw new ApiError(400, "Invalid userId");
         match.owner = new mongoose.Types.ObjectId(userId);
     }
@@ -33,14 +33,14 @@ const getAllVideos = asyncHandler(async (req, res) => {
         pipeline.push({ $match: match });
     }
     
-    // This pipeline stage is crucial for getting the owner's details.
+    // This pipeline stage is crucial for getting the owner's details for each video.
     pipeline.push({
         $lookup: {
             from: "users",
             localField: "owner",
             foreignField: "_id",
             as: "ownerDetails",
-            pipeline: [ { $project: { username: 1, avatar: 1 } } ]
+            pipeline: [ { $project: { username: 1, avatar: 1, fullName: 1 } } ]
         }
     });
     pipeline.push({ $addFields: { owner: { $first: "$ownerDetails" } } });

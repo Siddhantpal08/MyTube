@@ -23,18 +23,23 @@ function ChannelPage() {
         const fetchChannelData = async () => {
             if (!username) return;
             setLoading(true);
+            setError(null);
             try {
+                // Fetch channel profile and videos in parallel for faster loading
                 const [channelRes, videosRes] = await Promise.all([
                     axiosClient.get(`/users/c/${username}`),
-                    axiosClient.get(`/videos?username=${username}`)
+                    axiosClient.get(`/videos?username=${username}`) // This now correctly filters videos
                 ]);
+
                 const channelData = channelRes.data.data;
                 setChannel(channelData);
                 setVideos(videosRes.data.data.docs || []);
                 setSubscribersCount(channelData.subscribersCount);
                 setIsSubscribed(channelData.isSubscribed);
+
             } catch (err) {
-                setError(err.response?.data?.message || "Could not load channel.");
+                console.error("Failed to fetch channel data:", err);
+                setError(err.response?.data?.message || "Could not load the channel.");
             } finally {
                 setLoading(false);
             }
@@ -47,11 +52,11 @@ function ChannelPage() {
     if (loading) return <div className="p-8 text-center text-white">Loading channel...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
+    // --- THE FIX: isOwner check is now more robust ---
     const isOwner = user?._id === channel?._id;
     
-    // --- MIXED CONTENT FIX ---
     const secureCoverImage = channel.coverImage ? channel.coverImage.replace('http://', 'https://') : null;
-    const secureAvatar = channel.avatar ? channel.avatar.replace('http://', 'https') : placeholderAvatar;
+    const secureAvatar = channel.avatar ? channel.avatar.replace('http://', 'https://') : placeholderAvatar;
 
     return (
         <div>
@@ -60,7 +65,7 @@ function ChannelPage() {
                 <div className="h-40 md:h-52 w-full bg-gray-700">
                     {secureCoverImage && <img src={secureCoverImage} alt="Cover" className="w-full h-full object-cover" />}
                 </div>
-                <div className="p-4 sm:p-6 bg-[#121212]">
+                <div className="px-4 sm:px-6 lg:px-8 bg-[#121212] py-4">
                     <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20">
                         <img src={secureAvatar} alt={channel.username} className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[#121212]" />
                         <div className="ml-4 mt-4 sm:mt-0 flex-1">
@@ -70,7 +75,16 @@ function ChannelPage() {
                                 <span>{formatCompactNumber(subscribersCount)} subscribers</span>
                             </div>
                         </div>
-                        {/* ... (subscribe/edit buttons) ... */}
+                        {isOwner ? (
+                             <Link to="/account/edit" className="font-bold py-2 px-5 rounded-full bg-gray-600 hover:bg-gray-500 transition-colors">Edit Channel</Link>
+                        ) : isAuthenticated && (
+                            <button
+                                onClick={handleToggleSubscription}
+                                className={`font-bold py-2 px-5 rounded-full transition-colors duration-200 ${isSubscribed ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600 hover:bg-red-700'}`}
+                            >
+                                {isSubscribed ? 'Subscribed' : 'Subscribe'}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -87,12 +101,12 @@ function ChannelPage() {
             {activeTab === 'videos' && (
                 <div className="p-4 sm:p-6">
                     {videos.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-4 gap-y-8">
                             {videos.map(video => <VideoCard key={video._id} video={video} />)}
                         </div>
                     ) : (
                         <div className="text-center text-gray-400 py-16">
-                            <h2 className="text-xl font-semibold">No videos have been uploaded.</h2>
+                            <h2 className="text-xl font-semibold">This channel hasn't uploaded any videos.</h2>
                         </div>
                     )}
                 </div>

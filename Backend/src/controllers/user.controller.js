@@ -144,10 +144,16 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params;
-    if (!username?.trim()) throw new ApiError(400, "Username is required");
+    if (!username?.trim()) {
+        throw new ApiError(400, "Username is required");
+    }
 
     const channel = await User.aggregate([
-        { $match: { username: username.toLowerCase() } },
+        {
+            $match: {
+                username: username.toLowerCase()
+            }
+        },
         {
             $lookup: {
                 from: "subscriptions",
@@ -159,11 +165,12 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         {
             $addFields: {
                 subscribersCount: { $size: "$subscribers" },
+                // THE FIX: This condition is now safe for guests (when req.user is undefined)
                 isSubscribed: {
                     $cond: {
-                        if: { $toBool: req.user?._id },
+                        if: { $toBool: req.user?._id }, // Check if a user is logged in
                         then: { $in: [req.user._id, "$subscribers.subscriber"] },
-                        else: false
+                        else: false // If not logged in, they can't be subscribed
                     }
                 }
             }
@@ -176,12 +183,15 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 isSubscribed: 1,
                 avatar: 1,
                 coverImage: 1,
-                about: 1,
+                about: 1
             }
         }
     ]);
 
-    if (!channel?.length) throw new ApiError(404, "Channel does not exist");
+    if (!channel?.length) {
+        throw new ApiError(404, "Channel does not exist");
+    }
+
     return res.status(200).json(new ApiResponse(200, channel[0], "User channel profile fetched successfully"));
 });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // --- THE FIX IS ON THIS LINE ---
-import { useParams, NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from '../components/VideoCard';
 import { useAuth } from '../Context/AuthContext';

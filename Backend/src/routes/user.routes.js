@@ -50,6 +50,7 @@ router.route("/change-password").post(changeCurrentPassword);
 router.route("/current-user").get(getCurrentUser);
 router.route("/update-account").patch(updateAccountDetails);
 router.route("/avatar").patch(upload.single("avatar"), updateUserAvatar);
+router.route("/about").patch(updateUserAbout);
 router.route("/cover-image").patch(upload.single("coverImage"), updateUserCoverImage);
 router.route("/history").get(getWatchHistory);
 

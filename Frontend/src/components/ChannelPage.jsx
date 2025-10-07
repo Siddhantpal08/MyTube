@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, NavLink, useNavigate } from 'react-router-dom';
+import { useParams, NavLink, useLocation } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from '../components/VideoCard';
 import { useAuth } from '../Context/AuthContext';
 import toast from 'react-hot-toast';
 import { formatCompactNumber, placeholderAvatar } from '../utils/formatters';
+import ChannelAboutTab from './ChannelAboutTab'; // Assuming you have this component
 
 function ChannelPage() {
     const { username } = useParams();
-    const { user, isAuthenticated } = useAuth();
-    const navigate = useNavigate();
+    const { user, isAuthenticated, navigate } = useAuth(); // Assuming navigate is from your context
     const [channel, setChannel] = useState(null);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // We can manage subscription state directly here
     const [isSubscribed, setIsSubscribed] = useState(false);
     const [subscribersCount, setSubscribersCount] = useState(0);
 
@@ -25,19 +24,21 @@ function ChannelPage() {
             setLoading(true);
             setError(null);
             try {
-                // Step 1: Fetch the channel profile to get the user's ID
-                const channelRes = await axiosClient.get(`/users/c/${username}`);
+                // Fetch channel profile and videos in parallel for much faster loading
+                const [channelRes, videosRes] = await Promise.all([
+                    axiosClient.get(`/users/c/${username}`),
+                    axiosClient.get(`/videos?username=${username}`)
+                ]);
+
                 const channelData = channelRes.data.data;
-                setChannel(channelData);
-
-                // Step 2: Use the channel's ID to fetch only their videos
-                const videosRes = await axiosClient.get(`/videos?userId=${channelData._id}`);
-                setVideos(videosRes.data.data.docs);
-                
-                // Set initial subscription state from the fetched data
-                setIsSubscribed(channelData.isSubscribed);
-                setSubscribersCount(channelData.subscribersCount);
-
+                if (channelData) {
+                    setChannel(channelData);
+                    setVideos(videosRes.data.data.docs || []);
+                    setSubscribersCount(channelData.subscribersCount);
+                    setIsSubscribed(channelData.isSubscribed);
+                } else {
+                    throw new Error("Channel not found");
+                }
             } catch (err) {
                 console.error("Failed to fetch channel data:", err);
                 setError(err.response?.data?.message || "Could not load the channel.");
@@ -46,15 +47,11 @@ function ChannelPage() {
             }
         };
         fetchChannelData();
-    }, [username, isAuthenticated]); // Re-fetch data if the username or login state changes
+    }, [username, isAuthenticated]);
 
     const handleToggleSubscription = async () => {
-        if (!isAuthenticated) {
-            toast.error("Please log in to subscribe.");
-            return navigate("/login");
-        }
+        if (!isAuthenticated) return toast.error("Please log in to subscribe.");
         
-        // Optimistic UI update for instant feedback
         const originalSubState = isSubscribed;
         setIsSubscribed(prev => !prev);
         setSubscribersCount(prev => originalSubState ? prev - 1 : prev + 1);
@@ -62,17 +59,20 @@ function ChannelPage() {
         try {
             await axiosClient.post(`/subscriptions/c/${channel._id}`);
         } catch (error) {
-            // If the API call fails, revert the UI to the original state
             setIsSubscribed(originalSubState);
             setSubscribersCount(prev => originalSubState ? prev + 1 : prev - 1);
             toast.error("Failed to update subscription.");
         }
     };
 
+    const location = useLocation();
+    const activeTab = location.pathname.split('/').pop() === 'about' ? 'about' : 'videos';
+
     if (loading) return <div className="p-8 text-center text-white">Loading channel...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
+    if (!channel) return <div className="p-8 text-center text-gray-400">Channel not found.</div>;
 
-    const isOwner = user?._id === channel?._id;
+    const isOwner = user?._id === channel._id;
 
     return (
         <div>
@@ -107,22 +107,27 @@ function ChannelPage() {
             <div className="border-b border-gray-700 mt-4 px-4 sm:px-6 lg:px-8">
                 <nav className="flex space-x-4">
                     <NavLink to={`/channel/${username}`} end className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-white border-white' : 'text-gray-400 border-transparent hover:text-white'}`}>Videos</NavLink>
+                    <NavLink to={`/channel/${username}/about`} className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-white border-white' : 'text-gray-400 border-transparent hover:text-white'}`}>About</NavLink>
                 </nav>
             </div>
             
-            {/* --- Video Grid --- */}
-            <div className="p-4 sm:p-6 lg:p-8">
-                {videos.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-10">
-                        {videos.map(video => <VideoCard key={video._id} video={video} />)}
-                    </div>
-                ) : (
-                    <div className="text-center text-gray-400 py-16">
-                        <h2 className="text-xl font-semibold">No videos yet.</h2>
-                        {isOwner && <p className="mt-2">This channel hasn't uploaded any videos.</p>}
-                    </div>
-                )}
-            </div>
+            {/* --- Tab Content --- */}
+            {activeTab === 'videos' && (
+                <div className="p-4 sm:p-6 lg:p-8">
+                    {videos.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-6 gap-y-10">
+                            {videos.map(video => <VideoCard key={video._id} video={video} />)}
+                        </div>
+                    ) : (
+                        <div className="text-center text-gray-400 py-16">
+                            <h2 className="text-xl font-semibold">No videos yet.</h2>
+                            {isOwner && <p className="mt-2">This channel hasn't uploaded any videos.</p>}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab === 'about' && <ChannelAboutTab channel={channel} />}
         </div>
     );
 }

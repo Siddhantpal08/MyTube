@@ -144,10 +144,12 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params;
+
     if (!username?.trim()) {
-        throw new ApiError(400, "Username is required");
+        throw new ApiError(400, "Username is missing");
     }
 
+    // This is a more robust aggregation pipeline to fetch the channel profile.
     const channel = await User.aggregate([
         {
             $match: {

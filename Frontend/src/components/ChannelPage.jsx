@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// --- THE FIX IS ON THIS LINE ---
-import { useParams, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from '../components/VideoCard';
 import { useAuth } from '../Context/AuthContext';
@@ -29,6 +28,7 @@ function ChannelPage() {
             setLoading(true);
             setError(null);
             try {
+                // Fetch channel profile and videos in parallel for much faster loading
                 const [channelRes, videosRes] = await Promise.all([
                     axiosClient.get(`/users/c/${username}`),
                     axiosClient.get(`/videos?username=${username}`)
@@ -37,6 +37,8 @@ function ChannelPage() {
                 const channelData = channelRes.data.data;
                 setChannel(channelData);
                 setVideos(videosRes.data.data.docs || []);
+                
+                // Set initial subscription state from the fetched data
                 setSubscribersCount(channelData.subscribersCount);
                 setIsSubscribed(channelData.isSubscribed);
 
@@ -48,11 +50,15 @@ function ChannelPage() {
             }
         };
         fetchChannelData();
-    }, [username, isAuthenticated]);
+    }, [username, isAuthenticated]); // Re-fetch data if the username or login state changes
 
     const handleToggleSubscription = async () => {
-        if (!isAuthenticated) return toast.error("Please log in to subscribe.");
+        if (!isAuthenticated) {
+            toast.error("Please log in to subscribe.");
+            return navigate("/login");
+        }
         
+        // Optimistic UI update for instant feedback
         const originalSubState = isSubscribed;
         setIsSubscribed(prev => !prev);
         setSubscribersCount(prev => originalSubState ? prev - 1 : prev + 1);
@@ -60,6 +66,7 @@ function ChannelPage() {
         try {
             await axiosClient.post(`/subscriptions/c/${channel._id}`);
         } catch (error) {
+            // If the API call fails, revert the UI to the original state
             setIsSubscribed(originalSubState);
             setSubscribersCount(prev => originalSubState ? prev + 1 : prev - 1);
             toast.error("Failed to update subscription.");
@@ -68,9 +75,8 @@ function ChannelPage() {
 
     if (loading) return <div className="p-8 text-center text-white">Loading channel...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
-    if (!channel) return <div className="p-8 text-center text-gray-400">Channel not found.</div>;
 
-    const isOwner = user?._id === channel._id;
+    const isOwner = user?._id === channel?._id;
 
     return (
         <div>

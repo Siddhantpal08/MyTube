@@ -6,16 +6,21 @@ import VideoCard from './VideoCard';
 import SkeletonCard from './SkeletonCard';
 
 // New, attractive ChannelCard that is clickable
-const ChannelCard = ({ channel }) => (
-    <Link to={`/channel/${channel.username}`} className="flex flex-col items-center space-y-2 group flex-shrink-0 w-28 text-center">
-        <img 
-            src={channel.avatar} 
-            alt={channel.username} 
-            className="w-24 h-24 rounded-full object-cover border-2 border-gray-700 group-hover:border-red-500 transition-colors duration-300" 
-        />
-        <h3 className="text-sm font-semibold text-white truncate w-full">{channel.fullName}</h3>
-    </Link>
-);
+const ChannelCard = ({ channel }) => {
+    // --- MIXED CONTENT FIX ---
+    const secureAvatar = channel.avatar ? channel.avatar.replace('http://', 'https://') : null;
+    return (
+        <Link to={`/channel/${channel.username}`} className="flex flex-col items-center space-y-2 group flex-shrink-0 w-28 text-center">
+            <img 
+                src={secureAvatar} 
+                alt={channel.username} 
+                className="w-24 h-24 rounded-full object-cover border-2 border-gray-700 group-hover:border-red-500 transition-colors duration-300" 
+            />
+            <h3 className="text-sm font-semibold text-white truncate w-full">{channel.fullName}</h3>
+        </Link>
+    );
+};
+
 
 function SubscriptionsPage() {
     const { user } = useAuth();

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-// FIX: Assuming Context and API are in the root source directory or another common location. 
-// Adjusted paths by removing one level '..' for common React project structures.
-import { useAuth } from './Context/AuthContext'; 
-import axiosClient from './Api/axiosClient';
+import { useAuth } from '../Context/AuthContext.jsx'; 
+import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
 import myTubeLogo from '/mytube-logo.png'; // Assuming this is correct if served from root, otherwise needs adjustment
 

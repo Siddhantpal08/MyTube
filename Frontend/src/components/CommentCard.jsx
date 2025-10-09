@@ -10,7 +10,11 @@ import ConfirmationModal from './ConfirmationModel'; // Make sure you have this 
 function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
 
     console.log("Comment Owner Data:", comment.owner);
-    
+
+    const avatarUrl = typeof comment.owner?.avatar === 'string' 
+        ? comment.owner.avatar 
+        : comment.owner?.avatar?.url;
+
     const { user } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(comment.content);

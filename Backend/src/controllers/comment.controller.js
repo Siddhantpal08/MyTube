@@ -26,7 +26,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
                     foreignField: "_id",
                     as: "ownerDetails",
                     pipeline: [
-                        { $project: { username: 1, fullName: 1, avatar: "$avatar.url" } }
+                        { $project: { username: 1, fullName: 1, avatar: 1 } }
                     ]
                 }
             },

@@ -6,14 +6,25 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Subscription } from "../models/subscription.model.js";
 
+/**
+ * Reusable aggregation pipeline to fetch, populate, and format tweets.
+ * Ensures fields like likesCount, owner details, and isLiked status are included.
+ * @param {object} matchCondition - MongoDB $match object (e.g., { parentTweet: null })
+ * @param {string | null} userId - ID of the currently logged-in user (optional)
+ * @returns {Array} MongoDB aggregation pipeline stages
+ */
 const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
     const loggedInUserId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
     const pipeline = [
         { $match: matchCondition },
+        
+        // Populate likes and users
         { $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" } },
         { $lookup: { from: "users", localField: "owner", foreignField: "_id", as: "owner", pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }] } },
         { $lookup: { from: "tweets", localField: "_id", foreignField: "parentTweet", as: "replies" } },
+        
+        // Add computed fields
         {
             $addFields: {
                 likesCount: { $size: "$likes" },
@@ -28,8 +39,11 @@ const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
                 }
             }
         },
+        
+        // Final Projection and Sorting
         { $project: { likes: 0, replies: 0 } },
-        { $sort: { createdAt: -1 } }
+        // CRITICAL FIX: Ensure sorting by the Date object itself (which createdAt is)
+        { $sort: { createdAt: -1 } } 
     ];
     return pipeline;
 };
@@ -38,24 +52,27 @@ const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
 
 const getAllTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
+    // Match only top-level tweets
     const pipeline = getTweetsAggregatePipeline({ parentTweet: { $exists: false } }, req.user?._id);
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
     return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
-// FIX: Renamed and updated the logic to include user's own posts for the "For You" feed
+/**
+ * Fetches tweets from subscribed channels PLUS the user's own tweets.
+ */
 const getFeedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     
-    // 1. Get IDs of subscribed channels
+    // 1. Get IDs of subscribed channels and convert them to ObjectIds
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
-    const subscribedChannelIds = subscriptions.map(sub => new mongoose.Types.ObjectId(sub.channel));
+    const subscribedChannelIds = subscriptions.map(sub => sub.channel); // .channel is already ObjectId
     
-    // 2. CRITICAL FIX: Add the logged-in user's own ID to the list
+    // 2. CRITICAL: Add the logged-in user's own ID to the list
     const channelIdsToFetch = [
         ...subscribedChannelIds, 
-        new mongoose.Types.ObjectId(req.user._id)
+        req.user._id // req.user._id is already an ObjectId from the JWT payload
     ];
 
     // 3. Construct the pipeline to match owners from the combined list
@@ -72,7 +89,6 @@ const getFeedTweets = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, result, "User feed fetched successfully"));
 });
 
-// --- UPDATED: createTweet now handles replies and the "no reply to self" rule ---
 const createTweet = asyncHandler(async (req, res) => {
     const { content, parentTweetId } = req.body;
     if (!content?.trim()) throw new ApiError(400, "Content is required");
@@ -95,6 +111,7 @@ const createTweet = asyncHandler(async (req, res) => {
         parentTweet: parentTweetId || null
     });
     
+    // The created tweet must be re-fetched/populated to match the pipeline output format
     const createdTweet = await Tweet.findById(tweet._id).populate("owner", "username fullName avatar");
     return res.status(201).json(new ApiResponse(201, createdTweet, "Tweet created successfully"));
 });
@@ -196,6 +213,6 @@ export {
     deleteTweet,
     getAllTweets,
     getTweetById,
-    getFeedTweets, // Renamed export
+    getFeedTweets,
     getTweetReplies,
 };

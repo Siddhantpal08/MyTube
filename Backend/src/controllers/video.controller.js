@@ -33,6 +33,8 @@ const getAllVideos = asyncHandler(async (req, res) => {
         match.owner = new mongoose.Types.ObjectId(userId);
     }
 
+    match.isPublished = true;
+
     if (Object.keys(match).length > 0) {
         pipeline.push({ $match: match });
     }
@@ -112,8 +114,11 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid video ID");
     }
 
-    const video = await Video.findByIdAndUpdate(
-        videoId,
+    const video = await Video.findOneAndUpdate(
+        {
+            _id: videoId,
+            isPublished: true // Ensure the video is published
+        },
         { $inc: { views: 1 } },
         { new: true }
     ).populate("owner", "username fullName avatar");

@@ -4,6 +4,7 @@ import {
     toggleCommentLike,
     toggleVideoLike,
     toggleTweetLike,
+    getVideoLikeStatus,
 } from "../controllers/like.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -12,6 +13,8 @@ const router = Router();
 // All routes in this file require a user to be logged in,
 // so we apply the authentication middleware at the top.
 router.use(verifyJWT);
+
+router.route("/video/:videoId").get(getVideoLikeStatus);
 
 // Route to get all of the current user's liked videos
 router.route("/videos").get(getLikedVideos);

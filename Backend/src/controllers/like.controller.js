@@ -90,9 +90,33 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, videos, "Liked videos fetched successfully"));
 });
 
+const getVideoLikeStatus = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid Video ID");
+    }
+
+    // Run both database queries at the same time for better performance
+    const [likesCount, userLike] = await Promise.all([
+        Like.countDocuments({ video: videoId }),
+        Like.findOne({ video: videoId, likedBy: req.user._id })
+    ]);
+
+    const isLiked = !!userLike; // This will be true if a like was found, false otherwise
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            { isLiked, likesCount },
+            "Video like status fetched successfully"
+        )
+    );
+});
+
 export {
     toggleCommentLike,
     toggleTweetLike,
     toggleVideoLike,
     getLikedVideos,
+    getVideoLikeStatus,
 };

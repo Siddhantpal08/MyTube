@@ -27,7 +27,8 @@ const createPlaylist = asyncHandler(async (req, res) => {
         .json(new ApiResponse(201, playlist, "Playlist created successfully"));
 });
 
-// 🛠️ FIXED: This function now correctly fetches all playlists for a specific user
+// In playlist.controller.js
+
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
@@ -41,11 +42,23 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                 owner: new mongoose.Types.ObjectId(userId),
             },
         },
+        { // Look up the videos to find a thumbnail
+            $lookup: {
+                from: "videos",
+                localField: "videos",
+                foreignField: "_id",
+                as: "videosData",
+                pipeline: [
+                    { $limit: 1 }, // We only need the first video
+                    { $project: { thumbnail: 1 } }
+                ],
+            },
+        },
         {
             $addFields: {
-                totalVideos: {
-                    $size: "$videos",
-                },
+                totalVideos: { $size: "$videos" },
+                // Safely get the thumbnail of the first video, or null if empty
+                thumbnail: { $ifNull: [{ $first: "$videosData.thumbnail" }, null] }
             },
         },
         {
@@ -56,18 +69,26 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                 totalVideos: 1,
                 createdAt: 1,
                 updatedAt: 1,
+                thumbnail: 1, // Make sure to project the new thumbnail field
             },
         },
+        {
+            $sort: { createdAt: -1 }
+        }
     ]);
+
+    // Ensure all thumbnail URLs are secure
+    playlists.forEach(p => {
+        if (p.thumbnail && p.thumbnail.startsWith('http://')) {
+            p.thumbnail = p.thumbnail.replace('http://', 'https://');
+        }
+    });
 
     return res
         .status(200)
         .json(new ApiResponse(200, playlists, "User playlists fetched successfully"));
 });
 
-// In playlist.controller.js
-
-// In playlist.controller.js
 
 const getPlaylistById = asyncHandler(async (req, res) => {
     const { playlistId } = req.params;

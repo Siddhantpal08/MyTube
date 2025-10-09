@@ -20,6 +20,8 @@ const getTweetsAggregatePipeline = (matchStage = {}, userId = null) => {
                 likesCount: { $size: "$likes" },
                 replyCount: { $size: "$replies" },
                 owner: { $first: "$owner" },
+                // --- THIS IS THE CORRECTED LOGIC ---
+                // We use $cond to ensure the $in operator is only used when a user is logged in.
                 isLiked: {
                     $cond: {
                         if: { $eq: [loggedInUserId, null] }, // If no logged-in user
@@ -35,17 +37,16 @@ const getTweetsAggregatePipeline = (matchStage = {}, userId = null) => {
     return pipeline;
 };
 
-// --- UPDATED: Fetch only top-level tweets for the global feed ---
+// --- Your other controller functions remain the same ---
+
 const getAllTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
-    // Only fetch tweets that are NOT replies
     const pipeline = getTweetsAggregatePipeline({ parentTweet: { $exists: false } }, req.user?._id);
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
     return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
-// --- UPDATED: Fetch only top-level tweets for the subscribed feed ---
 const getSubscribedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
@@ -54,7 +55,7 @@ const getSubscribedTweets = asyncHandler(async (req, res) => {
     const pipeline = getTweetsAggregatePipeline(
         { 
             owner: { $in: channelIds },
-            parentTweet: { $exists: false } // Only fetch top-level tweets
+            parentTweet: { $exists: false }
         }, 
         req.user._id
     );
@@ -63,6 +64,7 @@ const getSubscribedTweets = asyncHandler(async (req, res) => {
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
     return res.status(200).json(new ApiResponse(200, result, "Subscribed feed fetched successfully"));
 });
+
 
 // --- UPDATED: createTweet now handles replies and the "no reply to self" rule ---
 const createTweet = asyncHandler(async (req, res) => {

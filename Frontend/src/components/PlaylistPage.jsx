@@ -1,20 +1,17 @@
-// src/components/PlaylistPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // NEW: Import Link for navigation
-import { useAuth } from '../Context/AuthContext'; // NEW: Import useAuth
+import { Link } from 'react-router-dom';
+import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 
 function PlaylistPage() {
-    const { user } = useAuth(); // NEW: Get the authenticated user from context
+    const { user } = useAuth();
     const [playlists, setPlaylists] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // NEW: State for the create playlist form
     const [newPlaylistName, setNewPlaylistName] = useState('');
     const [newPlaylistDescription, setNewPlaylistDescription] = useState('');
 
-    // FIXED: Use the dynamic user ID from the auth context
     const userId = user?._id;
 
     useEffect(() => {
@@ -23,7 +20,6 @@ function PlaylistPage() {
             try {
                 setLoading(true);
                 const response = await axiosClient.get(`/playlist/user/${userId}`);
-                console.log("Playlist Page API Response:", response.data);
                 setPlaylists(response.data.data);
                 setError(null);
             } catch (err) {
@@ -34,9 +30,8 @@ function PlaylistPage() {
         };
 
         fetchPlaylists();
-    }, [userId]); // Dependency array now correctly uses the dynamic userId
+    }, [userId]);
 
-    // NEW: Handler function to create a new playlist
     const handleCreatePlaylist = async (e) => {
         e.preventDefault();
         if (!newPlaylistName.trim()) {
@@ -48,13 +43,27 @@ function PlaylistPage() {
                 name: newPlaylistName,
                 description: newPlaylistDescription,
             });
-            // Add the new playlist to the state to update the UI instantly
             setPlaylists(prevPlaylists => [response.data.data, ...prevPlaylists]);
-            // Clear the form fields
             setNewPlaylistName('');
             setNewPlaylistDescription('');
         } catch (err) {
             alert(err.response?.data?.message || "Failed to create playlist.");
+        }
+    };
+
+    // 🔽 NEW: Handler function to delete a playlist
+    const handleDeletePlaylist = async (playlistId) => {
+        // Confirm before deleting
+        if (!window.confirm("Are you sure you want to delete this playlist?")) {
+            return;
+        }
+        try {
+            // Call the delete API endpoint
+            await axiosClient.delete(`/playlist/${playlistId}`);
+            // Update the state to remove the playlist from the UI
+            setPlaylists(prevPlaylists => prevPlaylists.filter(p => p._id !== playlistId));
+        } catch (err) {
+            alert(err.response?.data?.message || "Failed to delete playlist.");
         }
     };
 
@@ -66,7 +75,7 @@ function PlaylistPage() {
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-3xl font-bold mb-4">My Playlists</h1>
                 
-                {/* NEW: Create Playlist Form */}
+                {/* Create Playlist Form */}
                 <div className="bg-gray-800 p-4 rounded-lg mb-8">
                     <h2 className="text-xl font-semibold mb-3">Create a New Playlist</h2>
                     <form onSubmit={handleCreatePlaylist} className="space-y-4">
@@ -94,14 +103,27 @@ function PlaylistPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {playlists.length > 0 ? (
                         playlists.map((playlist) => (
-                            // NEW: Each card is now a clickable link
-                            <Link to={`/playlist/${playlist._id}`} key={playlist._id}>
-                                <div className="bg-gray-800 p-4 rounded-lg h-full hover:bg-gray-700 transition-colors">
-                                    <h2 className="font-bold text-lg">{playlist.name}</h2>
-                                    <p className="text-sm text-gray-400 mt-1">{playlist.description}</p>
-                                    <p className="text-sm text-gray-400 mt-2">{playlist.totalVideos || 0} videos</p>
-                                </div>
-                            </Link>
+                            <div key={playlist._id} className="relative group">
+                                <Link to={`/playlist/${playlist._id}`}>
+                                    <div className="bg-gray-800 p-4 rounded-lg h-full hover:bg-gray-700 transition-colors">
+                                        <h2 className="font-bold text-lg">{playlist.name}</h2>
+                                        <p className="text-sm text-gray-400 mt-1">{playlist.description}</p>
+                                        <p className="text-sm text-gray-400 mt-2">{playlist.totalVideos || 0} videos</p>
+                                    </div>
+                                </Link>
+                                {/* 🔽 NEW: Delete Button */}
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault(); // Prevent navigation
+                                        e.stopPropagation(); // Stop event bubbling
+                                        handleDeletePlaylist(playlist._id);
+                                    }}
+                                    className="absolute top-2 right-2 text-white bg-red-600 hover:bg-red-700 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Delete Playlist"
+                                >
+                                    &times;
+                                </button>
+                            </div>
                         ))
                     ) : (
                         <p className="col-span-3 text-center text-gray-400">No playlists found. Create your first one above!</p>

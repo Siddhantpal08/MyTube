@@ -357,11 +357,29 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User not found");
     }
 
-    // TODO: More comprehensive cleanup.
-    // This should also delete all of the user's videos, comments, tweets, likes, and playlists.
-    // It should also remove the user's avatar and cover image from Cloudinary.
-    
-    await User.findByIdAndDelete(userId);
+    // --- CASCADING DELETE ---
+    // Run all cleanup operations in parallel for better performance
+    await Promise.all([
+        // 1. Delete user's content from Cloudinary
+        user.avatar ? deleteFromCloudinary(user.avatar) : Promise.resolve(),
+        user.coverImage ? deleteFromCloudinary(user.coverImage) : Promise.resolve(),
+        
+        // 2. Delete all content created by the user
+        Video.deleteMany({ owner: userId }),
+        Comment.deleteMany({ owner: userId }),
+        Tweet.deleteMany({ owner: userId }),
+        Playlist.deleteMany({ owner: userId }),
+        
+        // 3. Delete user's likes and subscriptions
+        Like.deleteMany({ likedBy: userId }),
+        Subscription.deleteMany({ subscriber: userId }),
+        
+        // 4. Unsubscribe others from this user's channel
+        Subscription.deleteMany({ channel: userId }),
+        
+        // 5. Delete the user document itself
+        User.findByIdAndDelete(userId)
+    ]);
 
     const options = {
         httpOnly: true,
@@ -372,7 +390,7 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
         .status(200)
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
-        .json(new ApiResponse(200, {}, "User account deleted successfully"));
+        .json(new ApiResponse(200, {}, "User account and all associated data deleted successfully"));
 });
 
 // --- THE FINAL, COMPLETE EXPORT STATEMENT ---

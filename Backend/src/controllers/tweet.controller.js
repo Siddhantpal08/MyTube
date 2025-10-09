@@ -167,6 +167,23 @@ const deleteTweet = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, { _id: tweetId }, "Tweet deleted successfully"));
 });
 
+const getTweetReplies = asyncHandler(async (req, res) => {
+    const { tweetId } = req.params;
+    if (!isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Invalid Tweet ID");
+    }
+
+    // Use the reusable pipeline, but match on the parentTweet field
+    const pipeline = getTweetsAggregatePipeline(
+        { parentTweet: new mongoose.Types.ObjectId(tweetId) },
+        req.user?._id
+    );
+
+    const replies = await Tweet.aggregate(pipeline);
+
+    return res.status(200).json(new ApiResponse(200, replies, "Replies fetched successfully"));
+});
+
 export {
     createTweet,
     updateTweet,
@@ -174,4 +191,5 @@ export {
     getAllTweets,
     getTweetById,
     getSubscribedTweets,
+    getTweetReplies,
 };

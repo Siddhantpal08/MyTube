@@ -6,6 +6,7 @@ import {
     deleteTweet,
     getAllTweets,
     getSubscribedTweets,
+    getTweetReplies 
 } from "../controllers/tweet.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -13,6 +14,7 @@ const router = Router();
 
 // This route is now PUBLIC. It fetches all tweets for the community page.
 router.route("/").get(getAllTweets);
+router.route("/replies/:tweetId").get(getTweetReplies);
 
 // This middleware protects all routes defined BELOW it.
 // Any route defined above it remains public.

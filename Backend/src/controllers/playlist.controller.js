@@ -1,15 +1,13 @@
-import mongoose, {isValidObjectId} from "mongoose"
-import {Playlist} from "../models/playlist.model.js"
+import mongoose, { isValidObjectId } from "mongoose";
+import { Playlist } from "../models/playlist.model.js";
 import { Video } from "../models/video.model.js";
-import {ApiError} from "../utils/ApiError.js"
-import {ApiResponse} from "../utils/ApiResponse.js"
-import {asyncHandler} from "../utils/asyncHandler.js"
-
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 const createPlaylist = asyncHandler(async (req, res) => {
-    const {name, description} = req.body
+    const { name, description } = req.body;
 
-    //TODO: create playlist
     if (!name || name.trim() === "") {
         throw new ApiError(400, "Playlist name is required");
     }
@@ -27,8 +25,9 @@ const createPlaylist = asyncHandler(async (req, res) => {
     return res
         .status(201)
         .json(new ApiResponse(201, playlist, "Playlist created successfully"));
-})
+});
 
+// 🛠️ FIXED: This function now correctly fetches all playlists for a specific user
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
@@ -38,36 +37,35 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
     const playlists = await Playlist.aggregate([
         {
-            // Stage 1: Match all playlists owned by the user
             $match: {
-                owner: new mongoose.Types.ObjectId(userId)
-            }
+                owner: new mongoose.Types.ObjectId(userId),
+            },
         },
         {
-            // Stage 2: Add a new field 'totalVideos' by counting the size of the 'videos' array
             $addFields: {
                 totalVideos: {
-                    $size: "$videos"
-                }
-            }
+                    $size: "$videos",
+                },
+            },
         },
         {
-            // Stage 3: Project the fields you want to return to the frontend
             $project: {
                 _id: 1,
                 name: 1,
                 description: 1,
                 totalVideos: 1,
                 createdAt: 1,
-                updatedAt: 1
-            }
-        }
+                updatedAt: 1,
+            },
+        },
     ]);
 
     return res
         .status(200)
         .json(new ApiResponse(200, playlists, "User playlists fetched successfully"));
 });
+
+// 🛠️ FIXED: The video data is now "flattened" to be consistent with your other APIs
 const getPlaylistById = asyncHandler(async (req, res) => {
     const { playlistId } = req.params;
 
@@ -75,7 +73,6 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid Playlist ID");
     }
 
-    // Aggregation pipeline to get playlist details along with videos and owner info
     const playlist = await Playlist.aggregate([
         {
             $match: {
@@ -103,16 +100,17 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                     {
                         $project: {
                             _id: 1,
-                            "videoFile.url": 1,
-                            "thumbnail.url": 1,
                             title: 1,
                             duration: 1,
                             views: 1,
+                            createdAt: 1,
+                            thumbnail: "$thumbnail.url",
+                            videoFile: "$videoFile.url",
                             owner: {
-                                _id: 1,
-                                username: 1,
-                                fullName: 1,
-                                "avatar.url": 1,
+                                _id: "$owner._id",
+                                username: "$owner.username",
+                                fullName: "$owner.fullName",
+                                avatar: "$owner.avatar.url",
                             },
                         },
                     },
@@ -141,17 +139,17 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 _id: 1,
                 name: 1,
                 description: 1,
-                videos: 1,
-                owner: {
-                    _id: 1,
-                    username: 1,
-                    fullName: 1,
-                    "avatar.url": 1,
-                },
-                totalVideos: 1,
-                totalViews: 1,
                 createdAt: 1,
                 updatedAt: 1,
+                totalVideos: 1,
+                totalViews: 1,
+                videos: 1,
+                owner: {
+                    _id: "$owner._id",
+                    username: "$owner.username",
+                    fullName: "$owner.fullName",
+                    avatar: "$owner.avatar.url",
+                },
             },
         },
     ]);
@@ -182,12 +180,10 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video not found");
     }
 
-    // Check if the user is the owner of the playlist
     if (playlist.owner?.toString() !== req.user?._id.toString()) {
         throw new ApiError(403, "Only the owner can add videos to this playlist");
     }
-    
-    // Check if the video is already in the playlist
+
     if (playlist.videos.includes(videoId)) {
         return res
             .status(200)
@@ -197,7 +193,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
         playlistId,
         {
-            $addToSet: { videos: videoId }, // $addToSet prevents duplicate entries
+            $addToSet: { videos: videoId },
         },
         { new: true }
     );
@@ -224,7 +220,6 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Playlist not found");
     }
 
-    // Check if the user is the owner
     if (playlist.owner?.toString() !== req.user?._id.toString()) {
         throw new ApiError(403, "Only the owner can remove videos from this playlist");
     }
@@ -232,7 +227,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
         playlistId,
         {
-            $pull: { videos: videoId }, // $pull removes the specified videoId
+            $pull: { videos: videoId },
         },
         { new: true }
     );
@@ -259,7 +254,6 @@ const deletePlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Playlist not found");
     }
 
-    // Check if the user is the owner
     if (playlist.owner?.toString() !== req.user?._id.toString()) {
         throw new ApiError(403, "Only the owner can delete this playlist");
     }
@@ -288,8 +282,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     if (!playlist) {
         throw new ApiError(404, "Playlist not found");
     }
-    
-    // Check if the user is the owner
+
     if (playlist.owner?.toString() !== req.user?._id.toString()) {
         throw new ApiError(403, "Only the owner can update this playlist");
     }
@@ -321,5 +314,5 @@ export {
     addVideoToPlaylist,
     removeVideoFromPlaylist,
     deletePlaylist,
-    updatePlaylist
-}
+    updatePlaylist,
+};

@@ -9,8 +9,6 @@ import { Subscription } from "../models/subscription.model.js";
 const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
     const loggedInUserId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
-    // --- THIS IS THE FIX ---
-    // The pipeline now correctly wraps the incoming matchCondition in a $match stage.
     const pipeline = [
         { $match: matchCondition },
         { $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" } },
@@ -46,22 +44,32 @@ const getAllTweets = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
-const getSubscribedTweets = asyncHandler(async (req, res) => {
+// FIX: Renamed and updated the logic to include user's own posts for the "For You" feed
+const getFeedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
+    
+    // 1. Get IDs of subscribed channels
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
-    const channelIds = subscriptions.map(sub => sub.channel);
+    const subscribedChannelIds = subscriptions.map(sub => sub.channel);
+    
+    // 2. CRITICAL FIX: Add the logged-in user's own ID to the list
+    const channelIdsToFetch = [
+        ...subscribedChannelIds, 
+        new mongoose.Types.ObjectId(req.user._id)
+    ];
 
+    // 3. Construct the pipeline to match owners from the combined list
     const pipeline = getTweetsAggregatePipeline(
         { 
-            owner: { $in: channelIds },
-            parentTweet: { $exists: false }
+            owner: { $in: channelIdsToFetch },
+            parentTweet: { $exists: false } // Only fetch main tweets, not replies
         }, 
         req.user._id
     );
 
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
-    return res.status(200).json(new ApiResponse(200, result, "Subscribed feed fetched successfully"));
+    return res.status(200).json(new ApiResponse(200, result, "User feed fetched successfully"));
 });
 
 // --- UPDATED: createTweet now handles replies and the "no reply to self" rule ---
@@ -95,8 +103,6 @@ const getTweetById = asyncHandler(async (req, res) => {
     const { tweetId } = req.params;
     if (!isValidObjectId(tweetId)) throw new ApiError(400, "Invalid Tweet ID");
 
-    // --- THIS IS ALSO FIXED ---
-    // The call to the helper now correctly passes just the match condition, not the full stage.
     const pipeline = getTweetsAggregatePipeline({ _id: new mongoose.Types.ObjectId(tweetId) }, req.user?._id);
     
     const tweet = await Tweet.aggregate(pipeline);
@@ -109,40 +115,40 @@ const getTweetById = asyncHandler(async (req, res) => {
 
 
 const updateTweet = asyncHandler(async (req, res) => {
-  const { tweetId } = req.params;
-  const { content } = req.body;
+    const { tweetId } = req.params;
+    const { content } = req.body;
 
-  if (!content?.trim()) {
-      throw new ApiError(400, "Content is required");
-  }
-  if (!isValidObjectId(tweetId)) {
-      throw new ApiError(400, "Invalid tweet ID");
-  }
+    if (!content?.trim()) {
+        throw new ApiError(400, "Content is required");
+    }
+    if (!isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Invalid tweet ID");
+    }
 
-  const tweet = await Tweet.findById(tweetId);
+    const tweet = await Tweet.findById(tweetId);
 
-  if (!tweet) {
-      throw new ApiError(404, "Tweet not found");
-  }
+    if (!tweet) {
+        throw new ApiError(404, "Tweet not found");
+    }
 
-  if (tweet.owner.toString() !== req.user._id.toString()) {
-      throw new ApiError(403, "You are not authorized to edit this tweet");
-  }
+    if (tweet.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You are not authorized to edit this tweet");
+    }
 
-  // --- THE 15-MINUTE EDIT RULE ---
-  const tweetAgeInMinutes = (Date.now() - new Date(tweet.createdAt).getTime()) / 1000 / 60;
-  if (tweetAgeInMinutes > 15) {
-      throw new ApiError(403, "Tweets can only be edited within 15 minutes of posting.");
-  }
-  // --- END FIX ---
+    // --- THE 15-MINUTE EDIT RULE ---
+    const tweetAgeInMinutes = (Date.now() - new Date(tweet.createdAt).getTime()) / 1000 / 60;
+    if (tweetAgeInMinutes > 15) {
+        throw new ApiError(403, "Tweets can only be edited within 15 minutes of posting.");
+    }
+    // --- END FIX ---
 
-  const updatedTweet = await Tweet.findByIdAndUpdate(
-      tweetId,
-      { $set: { content } },
-      { new : true }
-  ).populate("owner", "username fullName avatar");
+    const updatedTweet = await Tweet.findByIdAndUpdate(
+        tweetId,
+        { $set: { content } },
+        { new : true }
+    ).populate("owner", "username fullName avatar");
 
-  return res.status(200).json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"));
+    return res.status(200).json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"));
 });
 
 const deleteTweet = asyncHandler(async (req, res) => {
@@ -190,6 +196,6 @@ export {
     deleteTweet,
     getAllTweets,
     getTweetById,
-    getSubscribedTweets,
+    getFeedTweets, // Renamed export
     getTweetReplies,
 };

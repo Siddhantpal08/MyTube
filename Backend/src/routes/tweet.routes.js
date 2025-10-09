@@ -5,7 +5,7 @@ import {
     updateTweet,
     deleteTweet,
     getAllTweets,
-    getSubscribedTweets,
+    getFeedTweets, // <-- RENAMED IMPORT
     getTweetReplies 
 } from "../controllers/tweet.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -17,12 +17,12 @@ router.route("/").get(getAllTweets);
 router.route("/replies/:tweetId").get(getTweetReplies);
 
 // This middleware protects all routes defined BELOW it.
-// Any route defined above it remains public.
 router.use(verifyJWT);
 
 // --- PROTECTED ROUTES ---
 router.route("/").post(createTweet);
-router.route("/feed").get(getSubscribedTweets);
+// FIX: Updated endpoint to call the new controller name
+router.route("/feed").get(getFeedTweets); 
 router.route("/user/:userId").get(getTweetById);
 router.route("/:tweetId").patch(updateTweet).delete(deleteTweet);
 

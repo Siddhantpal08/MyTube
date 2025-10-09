@@ -8,6 +8,9 @@ import { placeholderAvatar, timeSince } from '../utils/formatters';
 import ConfirmationModal from './ConfirmationModel'; // Make sure you have this component
 
 function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
+
+    console.log("Comment Owner Data:", comment.owner);
+    
     const { user } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(comment.content);

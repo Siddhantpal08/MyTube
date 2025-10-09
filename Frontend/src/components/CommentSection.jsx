@@ -90,7 +90,7 @@ function CommentsSection({ videoId }) {
             
             {isAuthenticated ? (
                 <form onSubmit={handleAddComment} className="flex items-start space-x-4 mb-8">
-                    <img src={user?.avatar?.url || placeholderAvatar} alt="your avatar" className="w-10 h-10 rounded-full object-cover" />
+                    <img src={user?.avatar || placeholderAvatar} alt="your avatar" className="w-10 h-10 rounded-full object-cover" />
                     <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Add a public comment..." className="flex-grow p-2 bg-gray-700 text-white rounded-md" disabled={isPosting}/>
                     <button type="submit" className="bg-red-600 font-semibold px-4 py-2 rounded-md h-10" disabled={isPosting || !newComment.trim()}>Comment</button>
                 </form>

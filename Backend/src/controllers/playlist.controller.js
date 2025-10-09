@@ -80,14 +80,14 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 _id: new mongoose.Types.ObjectId(playlistId),
             },
         },
-        { // This looks up the videos in the playlist
+        {
             $lookup: {
                 from: "videos",
                 localField: "videos",
                 foreignField: "_id",
                 as: "videos",
                 pipeline: [
-                    { // This looks up the owner of each video
+                    {
                         $lookup: {
                             from: "users",
                             localField: "owner",
@@ -96,7 +96,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                         },
                     },
                     { $unwind: "$owner" },
-                    { // This projects the final video fields, flattening the URLs
+                    {
                         $project: {
                             _id: 1,
                             videoFile: "$videoFile.url",
@@ -116,7 +116,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 ],
             },
         },
-        { // This looks up the owner of the playlist itself
+        {
             $lookup: {
                 from: "users",
                 localField: "owner",
@@ -125,13 +125,13 @@ const getPlaylistById = asyncHandler(async (req, res) => {
             },
         },
         { $unwind: "$owner" },
-        { // This calculates the total video and view counts
+        {
             $addFields: {
                 totalVideos: { $size: "$videos" },
                 totalViews: { $sum: "$videos.views" },
             },
         },
-        { // This projects the final playlist fields
+        {
             $project: {
                 _id: 1,
                 name: 1,

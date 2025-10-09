@@ -1,19 +1,21 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom'; // Import useLocation
 import axiosClient from '../Api/axiosClient'; 
 import { useAuth } from '../Context/AuthContext';
 import toast from 'react-hot-toast';
 import TweetCard from '../components/TweetCard'; 
 
 function CommunityPage() {
+    // FIX: Destructure location for the refresh trigger
+    const location = useLocation(); 
     const { isAuthenticated, user } = useAuth();
-    const [tweets, setTweets] = React.useState([]);
-    const [loading, setLoading] = React.useState(true);
-    const [error, setError] = React.useState(null);
+    const [tweets, setTweets] = useState([]); // Use React.useState for consistency
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     
     // Initialize to 'subscribed' only if authenticated, otherwise default to 'global'
     const initialFeedType = isAuthenticated ? 'subscribed' : 'global';
-    const [feedType, setFeedType] = React.useState(initialFeedType);
+    const [feedType, setFeedType] = useState(initialFeedType);
 
     // Ensure feedType resets if authentication status changes (e.g., login/logout)
     React.useEffect(() => {
@@ -30,6 +32,7 @@ function CommunityPage() {
         const fetchTweets = async () => {
             setLoading(true);
             setError(null);
+            
             // If the user is logged out, always default to the global endpoint
             const endpoint = (feedType === 'subscribed' && isAuthenticated) ? '/tweets/feed' : '/tweets';
             
@@ -38,6 +41,7 @@ function CommunityPage() {
                 setTweets(response.data?.data?.docs || []);
             } catch (err) {
                 console.error("Failed to fetch community posts:", err);
+                
                 // If fetching subscribed feed fails (e.g., due to auth), try switching to global
                 if (feedType === 'subscribed' && err.response?.status === 401) {
                     toast.error("Authentication required for 'For You' feed.");
@@ -51,7 +55,9 @@ function CommunityPage() {
         };
 
         fetchTweets();
-    }, [feedType, isAuthenticated]);
+        // FIX: Add location.state to the dependency array
+        // This forces the feed to reload when the AddTweetPage navigates back with the new state.
+    }, [feedType, isAuthenticated, location.state]); 
 
     const handleDeleteTweet = async (tweetId) => {
         // Optimistically remove the tweet from the UI

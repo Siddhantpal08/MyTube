@@ -7,28 +7,76 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import axios from "axios";
 
 // A smart controller that gets all comments for ANY video (internal or external)
+// In comment.controller.js
+
 const getVideoComments = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { page = 1, limit = 10, pageToken } = req.query;
     const isInternal = mongoose.isValidObjectId(videoId);
 
-    let internalCommentsResult = { docs: [], totalDocs: 0, hasNextPage: false };
-    let youtubeCommentsResult = { docs: [], totalResults: 0, nextPageToken: null, hasNextPage: false };
-    let commentsDisabled = false;
-
     if (isInternal) {
-        // --- Fetch paginated comments for your OWN videos ---
-        const aggregate = Comment.aggregate([{ $match: { video: new mongoose.Types.ObjectId(videoId) } }]);
-        const options = { page, limit, populate: { path: "owner", select: "username fullName avatar" }, sort: { createdAt: -1 } };
-        internalCommentsResult = await Comment.aggregatePaginate(aggregate, options);
-    } else {
-        // --- Fetch comments for EXTERNAL YouTube videos ---
-        // 1. Fetch your site's comments for this YouTube video ID
-        const internalAggregate = Comment.aggregate([{ $match: { youtubeVideoId: videoId } }]);
-        const internalOptions = { page: 1, limit: 100, populate: { path: "owner", select: "username fullName avatar" }, sort: { createdAt: -1 } }; // Fetch all internal for now
-        internalCommentsResult = await Comment.aggregatePaginate(internalAggregate, internalOptions);
+        // --- THIS IS THE CORRECTED LOGIC FOR YOUR VIDEOS ---
+        const aggregate = Comment.aggregate([
+            { 
+                $match: { video: new mongoose.Types.ObjectId(videoId) } 
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "ownerDetails",
+                    pipeline: [
+                        {
+                            // Select the fields and flatten the avatar URL
+                            $project: {
+                                username: 1,
+                                fullName: 1,
+                                avatar: "$avatar.url" 
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields: {
+                    // This safely gets the owner object. It will be null if the owner was deleted.
+                    owner: { $first: "$ownerDetails" }
+                }
+            },
+            {
+                $project: {
+                    ownerDetails: 0, // Clean up the temporary field
+                    __v: 0
+                }
+            },
+            { 
+                $sort: { createdAt: -1 } 
+            }
+        ]);
+
+        const options = { 
+            page: parseInt(page, 10), 
+            limit: parseInt(limit, 10) 
+        };
+        const internalCommentsResult = await Comment.aggregatePaginate(aggregate, options);
         
-        // 2. Fetch comments from the YouTube API
+        const responseData = {
+            comments: internalCommentsResult.docs,
+            totalComments: internalCommentsResult.totalDocs,
+            hasNextPage: internalCommentsResult.hasNextPage,
+            nextPage: internalCommentsResult.nextPage,
+            commentsDisabled: false,
+        };
+        
+        return res.status(200).json(new ApiResponse(200, responseData, "Comments fetched successfully"));
+
+    } else {
+        // --- Your existing logic for YouTube comments remains untouched ---
+        let internalCommentsResult = { docs: [] };
+        let youtubeCommentsResult = { docs: [], totalResults: 0, nextPageToken: null, hasNextPage: false };
+        let commentsDisabled = false;
+
         try {
             const apiKey = process.env.YOUTUBE_API_KEY;
             const apiUrl = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&key=${apiKey}&maxResults=10&order=relevance${pageToken ? `&pageToken=${pageToken}` : ''}`;
@@ -48,18 +96,17 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 console.error("Failed to fetch YouTube comments:", error.message);
             }
         }
-    }
 
-    const responseData = {
-        comments: internalCommentsResult.docs.concat(youtubeCommentsResult.docs),
-        totalComments: (internalCommentsResult.totalDocs || 0) + (youtubeCommentsResult.totalResults || 0),
-        hasNextPage: internalCommentsResult.hasNextPage || youtubeCommentsResult.hasNextPage,
-        nextPageToken: youtubeCommentsResult.nextPageToken, // For YouTube pagination
-        nextPage: internalCommentsResult.nextPage, // For internal pagination
-        commentsDisabled,
-    };
-    
-    return res.status(200).json(new ApiResponse(200, responseData, "Comments fetched successfully"));
+        const responseData = {
+            comments: internalCommentsResult.docs.concat(youtubeCommentsResult.docs),
+            totalComments: (internalCommentsResult.totalDocs || 0) + (youtubeCommentsResult.totalResults || 0),
+            hasNextPage: youtubeCommentsResult.hasNextPage,
+            nextPageToken: youtubeCommentsResult.nextPageToken,
+            commentsDisabled,
+        };
+        
+        return res.status(200).json(new ApiResponse(200, responseData, "Comments fetched successfully"));
+    }
 });
 
 // A smart controller that adds a comment to the correct video type

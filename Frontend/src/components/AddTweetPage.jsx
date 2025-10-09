@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// FIX: Corrected import paths for utilities, API client, and context
-import axiosClient from '../Api/axiosClient'; 
+import axiosClient from '../Api/axiosClient'; // Adjusted path casing
 import toast from 'react-hot-toast';
-import { useAuth } from '../Context/AuthContext';
+import { useAuth } from '../Context/AuthContext'; // Adjusted path casing
 import { placeholderAvatar } from '../utils/formatters';
 
 function AddTweetPage() {
@@ -12,10 +11,10 @@ function AddTweetPage() {
     const [content, setContent] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // FIX: Safely determine the avatar URL by checking for both string and object formats
+    // Safely determine the avatar URL
     const userAvatarUrl = user?.avatar?.url 
-        ? user.avatar.url       // Case 1: Avatar is an object with a 'url' property
-        : user?.avatar;         // Case 2: Avatar is a direct URL string
+        ? user.avatar.url 
+        : user?.avatar; 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -29,8 +28,11 @@ function AddTweetPage() {
         try {
             await axiosClient.post('/tweets', { content });
             toast.success("Post published successfully!", { id: toastId });
-            // Added a slight delay to ensure toast shows before navigation
-            setTimeout(() => navigate('/community'), 100); 
+            
+            // FIX: Navigate and pass a state to force CommunityPage useEffect to run
+            navigate('/community', { state: { refresh: Date.now() } }); 
+            // END FIX
+
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to publish post.", { id: toastId });
             console.error("Failed to add tweet:", error);
@@ -47,14 +49,12 @@ function AddTweetPage() {
                     onClick={() => navigate(-1)} // Go back to the previous page
                     className="text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"
                 >
-                    {/* Replaced SVG with Lucide icon for better maintainability and look */}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
             </div>
 
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
                 <div className="flex items-start space-x-4">
-                    {/* FIX APPLIED HERE: Use the robustly determined userAvatarUrl */}
                     <img 
                         src={userAvatarUrl || placeholderAvatar} 
                         alt={user?.username || "User"} 
@@ -69,8 +69,7 @@ function AddTweetPage() {
                             maxLength="280"
                         />
                         <div className="flex justify-between items-center mt-2 border-t border-gray-200 dark:border-gray-700 pt-3">
-                             {/* Added conditional styling for max length warning */}
-                             <span 
+                            <span 
                                 className={`text-sm mr-4 ${content.length >= 280 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}`}
                             >
                                 {content.length} / 280

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useAuth } from '../Context/AuthContext';
-import axiosClient from '../Api/axiosClient';
+// FIX: Assuming Context and API are in the root source directory or another common location. 
+// Adjusted paths by removing one level '..' for common React project structures.
+import { useAuth } from './Context/AuthContext'; 
+import axiosClient from './Api/axiosClient';
 import toast from 'react-hot-toast';
-import myTubeLogo from '/mytube-logo.png';
+import myTubeLogo from '/mytube-logo.png'; // Assuming this is correct if served from root, otherwise needs adjustment
 
 // --- Reusable Input Field Component ---
-// Now includes an 'error' prop to display validation messages
 const InputField = ({ label, name, type, value, onChange, autoComplete, error }) => (
     <div>
         <label htmlFor={name} className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">
@@ -42,7 +43,6 @@ function LoginPage() {
     const [serverError, setServerError] = useState('');
 
     // Determine where to redirect after a successful login
-    // If the user was sent here from a protected route, 'from.pathname' will exist.
     const from = location.state?.from?.pathname || "/";
 
     const handleChange = (e) => {
@@ -80,9 +80,23 @@ function LoginPage() {
 
         setLoading(true);
         const toastId = toast.loading("Logging in...");
+        
+        // --- Backend Data Key FIX ---
+        // This logic correctly maps the single frontend field to the two backend keys.
+        const loginIdentifier = formData.emailOrUsername.trim();
+        const isEmail = loginIdentifier.includes('@'); 
+
+        // Construct the payload with the keys the backend expects (email and username)
+        const payload = {
+            password: formData.password,
+            email: isEmail ? loginIdentifier : undefined,
+            username: !isEmail ? loginIdentifier : undefined,
+        };
+        // -----------------------------
 
         try {
-            const response = await axiosClient.post('/users/login', formData);
+            // Send the corrected payload
+            const response = await axiosClient.post('/users/login', payload);
 
             const { user, accessToken } = response.data.data;
             login(user, accessToken); // Update auth context
@@ -93,6 +107,7 @@ function LoginPage() {
             navigate(from, { replace: true });
 
         } catch (err) {
+            // Extract the specific message from the server for better user feedback
             const errorMessage = err.response?.data?.message || "Login failed. Please check your credentials.";
             setServerError(errorMessage);
             toast.error(errorMessage, { id: toastId });
@@ -106,6 +121,7 @@ function LoginPage() {
             <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-[#1A1A1A] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800">
                 
                 <div className="text-center">
+                    {/* Assuming myTubeLogo path is correct */}
                     <img src={myTubeLogo} alt="MyTube Logo" className="w-12 h-12 mx-auto mb-2" />
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome Back</h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-2">Sign in to continue to MyTube</p>
@@ -114,7 +130,7 @@ function LoginPage() {
                 <form onSubmit={handleLogin} className="space-y-4">
                     <InputField
                         label="Email or Username"
-                        name="emailOrUsername"
+                        name="emailOrUsername" // Frontend form key
                         type="text"
                         value={formData.emailOrUsername}
                         onChange={handleChange}

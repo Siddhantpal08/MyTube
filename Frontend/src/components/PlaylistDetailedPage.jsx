@@ -35,7 +35,9 @@ function PlaylistDetailPage() {
             <div className="mb-8">
                 <h1 className="text-3xl font-bold">{playlist.name}</h1>
                 <p className="text-gray-400 mt-2">{playlist.description}</p>
-                <p className="text-sm text-gray-400 mt-1">Created by {playlist.owner?.username} • {playlist.videos?.length || 0} videos</p>
+                <p className="text-sm text-gray-400 mt-1">
+                    Created by {playlist.owner?.username} • {playlist.totalVideos || 0} videos • {playlist.totalViews || 0} views
+                </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {playlist.videos.length > 0 ? (

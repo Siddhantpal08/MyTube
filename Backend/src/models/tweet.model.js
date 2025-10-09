@@ -10,6 +10,10 @@ const tweetSchema = new Schema(
         content: {
             type: String,
             required: true
+        },
+        parentTweet: {
+            type: Schema.Types.ObjectId,
+            ref: 'Tweet'
         }
     },
     {

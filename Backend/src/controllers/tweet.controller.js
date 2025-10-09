@@ -6,122 +6,80 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Subscription } from "../models/subscription.model.js";
 
-const getTweetsAggregate = (matchStage = {}, userId = null) => {
-    return [
-        matchStage, // This will be the filter (e.g., all tweets, or tweets from subscribed channels)
-        {
-            $lookup: { // Join with likes
-                from: "likes",
-                localField: "_id",
-                foreignField: "tweet",
-                as: "likes"
-            }
-        },
-        {
-            $lookup: { // Join with users to get the owner's details
-                from: "users",
-                localField: "owner",
-                foreignField: "_id",
-                as: "owner",
-                pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }]
-            }
-        },
+// A reusable pipeline for fetching tweets with all necessary data
+const getTweetsAggregatePipeline = (matchStage = {}, userId = null) => {
+    const pipeline = [
+        matchStage,
+        { $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" } },
+        { $lookup: { from: "users", localField: "owner", foreignField: "_id", as: "owner", pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }] } },
+        // --- NEW: Lookup replies (other tweets that reference this one) ---
+        { $lookup: { from: "tweets", localField: "_id", foreignField: "parentTweet", as: "replies" } },
         {
             $addFields: {
                 likesCount: { $size: "$likes" },
+                replyCount: { $size: "$replies" }, // Add reply count
                 owner: { $first: "$owner" },
-                // Check if the current logged-in user's ID is in the 'likes' array
                 isLiked: userId ? { $in: [new mongoose.Types.ObjectId(userId), "$likes.likedBy"] } : false
             }
         },
-        { $project: { likes: 0 } }, // Remove the full likes array to save bandwidth
+        { $project: { likes: 0, replies: 0 } }, // Don't send the full arrays
         { $sort: { createdAt: -1 } }
     ];
+    return pipeline;
 };
 
-// --- PUBLIC FEED (FOR GUESTS & LOGGED-IN USERS) ---
+// --- UPDATED: Fetch only top-level tweets for the global feed ---
 const getAllTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
-    const userId = req.user?._id;
-
-    const pipeline = [
-        {
-            $lookup: { // Join with likes
-                from: "likes",
-                localField: "_id",
-                foreignField: "tweet",
-                as: "likes"
-            }
-        },
-        {
-            $lookup: { // Join with users to get the owner's details
-                from: "users",
-                localField: "owner",
-                foreignField: "_id",
-                as: "owner",
-                pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }]
-            }
-        },
-        {
-            $addFields: {
-                likesCount: { $size: "$likes" },
-                owner: { $first: "$owner" },
-                isLiked: userId ? { $in: [new mongoose.Types.ObjectId(userId), "$likes.likedBy"] } : false
-            }
-        },
-        { $project: { likes: 0 } },
-        { $sort: { createdAt: -1 } }
-    ];
-
+    // Only fetch tweets that are NOT replies
+    const pipeline = getTweetsAggregatePipeline({ parentTweet: { $exists: false } }, req.user?._id);
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
-
-    if (!result) {
-        throw new ApiError(500, "Could not retrieve tweets");
-    }
     return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
-// --- PERSONALIZED FEED (FOR LOGGED-IN USERS) ---
+// --- UPDATED: Fetch only top-level tweets for the subscribed feed ---
 const getSubscribedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
     const channelIds = subscriptions.map(sub => sub.channel);
 
-    const pipeline = [
-        { $match: { owner: { $in: channelIds } } },
-        {
-            $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "owner",
-                foreignField: "_id",
-                as: "owner",
-                pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }]
-            }
-        },
-        {
-            $addFields: {
-                likesCount: { $size: "$likes" },
-                owner: { $first: "$owner" },
-                isLiked: { $in: [req.user._id, "$likes.likedBy"] }
-            }
-        },
-        { $project: { likes: 0 } },
-        { $sort: { createdAt: -1 } }
-    ];
+    const pipeline = getTweetsAggregatePipeline(
+        { 
+            owner: { $in: channelIds },
+            parentTweet: { $exists: false } // Only fetch top-level tweets
+        }, 
+        req.user._id
+    );
 
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
     return res.status(200).json(new ApiResponse(200, result, "Subscribed feed fetched successfully"));
 });
 
+// --- UPDATED: createTweet now handles replies and the "no reply to self" rule ---
 const createTweet = asyncHandler(async (req, res) => {
-    const { content } = req.body;
+    const { content, parentTweetId } = req.body;
     if (!content?.trim()) throw new ApiError(400, "Content is required");
-    const tweet = await Tweet.create({ content, owner: req.user._id });
+
+    // If it's a reply, validate the parent and check ownership
+    if (parentTweetId) {
+        if (!isValidObjectId(parentTweetId)) throw new ApiError(400, "Invalid parent tweet ID");
+        const parentTweet = await Tweet.findById(parentTweetId);
+        if (!parentTweet) throw new ApiError(404, "Parent tweet not found");
+        
+        // --- Rule: No replies to self ---
+        if (parentTweet.owner.toString() === req.user._id.toString()) {
+            throw new ApiError(403, "You cannot reply to your own post.");
+        }
+    }
+
+    const tweet = await Tweet.create({ 
+        content, 
+        owner: req.user._id,
+        parentTweet: parentTweetId || null
+    });
+    
     const createdTweet = await Tweet.findById(tweet._id).populate("owner", "username fullName avatar");
     return res.status(201).json(new ApiResponse(201, createdTweet, "Tweet created successfully"));
 });

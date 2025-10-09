@@ -39,32 +39,32 @@ const TweetCard = ({ tweet, onDelete }) => {
             <Link to={`/channel/${tweet.owner?.username}`}>
                 <img src={tweet.owner?.avatar || placeholderAvatar} alt={tweet.owner?.username} className="w-12 h-12 rounded-full object-cover" />
             </Link>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0"> {/* Added min-w-0 to prevent overflow */}
                 <div className="flex justify-between items-start">
-                    <div>
-                        <div className="flex items-center space-x-2">
-                            <Link to={`/channel/${tweet.owner?.username}`} className="font-bold text-white hover:underline">{tweet.owner?.fullName}</Link>
-                            <span className="text-gray-400 text-sm">@{tweet.owner?.username}</span>
-                            <span className="text-gray-500 text-sm">· {timeSince(tweet.createdAt)}</span>
+                    <div className="flex-1">
+                        <div className="flex items-center flex-wrap space-x-2">
+                            <Link to={`/channel/${tweet.owner?.username}`} className="font-bold text-white hover:underline truncate">{tweet.owner?.fullName}</Link>
+                            <span className="text-gray-400 text-sm truncate">@{tweet.owner?.username}</span>
+                            <span className="text-gray-500 text-sm flex-shrink-0">· {timeSince(tweet.createdAt)}</span>
                         </div>
-                        <p className="text-gray-300 mt-1 whitespace-pre-wrap">{tweet.content}</p>
+                        <p className="text-gray-300 mt-1 whitespace-pre-wrap break-words">{tweet.content}</p>
                     </div>
 
                     {isOwner && (
-                        <div className="flex-shrink-0 flex items-center space-x-2">
+                        <div className="flex-shrink-0 flex items-center space-x-2 ml-2">
                             {canEdit(tweet.createdAt) && (
                                 <Link to={`/tweet/${tweet._id}/edit`} title="Edit" className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="http://www.w3.org/2000/svg" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>
                                 </Link>
                             )}
                             <button onClick={() => onDelete(tweet._id)} title="Delete" className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-gray-700">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="http://www.w3.org/2000/svg" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                         </div>
                     )}
                 </div>
 
-                {/* --- THE FIX IS HERE --- */}
+                {/* --- THE FINAL ICON FIX --- */}
                 <div className="mt-3 flex items-center">
                     <button onClick={handleLike} className={`flex items-center space-x-2 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

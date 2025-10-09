@@ -6,47 +6,56 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import axios from "axios";
 
-// A smart controller that gets all comments for ANY video (internal or external)
-// In comment.controller.js
-
 const getVideoComments = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { page = 1, limit = 10, pageToken } = req.query;
     const isInternal = mongoose.isValidObjectId(videoId);
+    
+    // Get the current user's ID, if they are logged in
+    const userId = req.user?._id;
 
     if (isInternal) {
-        // --- THIS IS THE CORRECTED LOGIC FOR YOUR VIDEOS ---
         const aggregate = Comment.aggregate([
             { 
                 $match: { video: new mongoose.Types.ObjectId(videoId) } 
             },
-            {
+            { // Join with the Users collection to get owner details
                 $lookup: {
                     from: "users",
                     localField: "owner",
                     foreignField: "_id",
                     as: "ownerDetails",
                     pipeline: [
-                        {
-                            // Select the fields and flatten the avatar URL
-                            $project: {
-                                username: 1,
-                                fullName: 1,
-                                avatar: 1,
-                            }
-                        }
+                        { $project: { username: 1, fullName: 1, avatar: "$avatar.url" } }
                     ]
                 }
             },
-            {
-                $addFields: {
-                    // This safely gets the owner object. It will be null if the owner was deleted.
-                    owner: { $first: "$ownerDetails" }
+            { // Join with the Likes collection to get like details
+                $lookup: {
+                    from: "likes",
+                    localField: "_id",
+                    foreignField: "comment",
+                    as: "likes"
                 }
             },
-            {
+            { // Add the new fields for likes
+                $addFields: {
+                    owner: { $first: "$ownerDetails" },
+                    likesCount: { $size: "$likes" },
+                    isLiked: {
+                        // Check if the current user's ID is in the array of likes
+                        $cond: {
+                            if: { $in: [userId, "$likes.likedBy"] },
+                            then: true,
+                            else: false
+                        }
+                    }
+                }
+            },
+            { // Clean up temporary fields
                 $project: {
-                    ownerDetails: 0, // Clean up the temporary field
+                    ownerDetails: 0,
+                    likes: 0,
                     __v: 0
                 }
             },

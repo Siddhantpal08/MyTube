@@ -14,7 +14,8 @@ import {
     searchChannels,
     forgotPassword,
     resetPassword,
-    updateUserAbout // Import the new function
+    updateUserAbout,
+    deleteUserAccount
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT, verifyJWTAndSetUser } from "../middlewares/auth.middleware.js";
@@ -36,6 +37,10 @@ router.route("/c/:username").get(verifyJWTAndSetUser, getUserChannelProfile);
 // --- PROTECTED ROUTES ---
 router.use(verifyJWT);
 
+// In user.routes.js, inside the "PROTECTED ROUTES" section
+
+// The 'delete' method on the root path will trigger the account deletion
+router.route("/").delete(deleteUserAccount);
 router.route("/logout").post(logoutUser);
 router.route("/change-password").post(changeCurrentPassword);
 router.route("/current-user").get(getCurrentUser);

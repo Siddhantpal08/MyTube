@@ -349,6 +349,31 @@ const updateUserAbout = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, user, "About section updated successfully"));
 });
 
+const deleteUserAccount = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    // TODO: More comprehensive cleanup.
+    // This should also delete all of the user's videos, comments, tweets, likes, and playlists.
+    // It should also remove the user's avatar and cover image from Cloudinary.
+    
+    await User.findByIdAndDelete(userId);
+
+    const options = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+    };
+
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, {}, "User account deleted successfully"));
+});
 
 // --- THE FINAL, COMPLETE EXPORT STATEMENT ---
 export { 
@@ -366,5 +391,6 @@ export {
     searchChannels,
     forgotPassword,
     resetPassword,
-    updateUserAbout, 
+    updateUserAbout,
+    deleteUserAccount 
 };

@@ -27,7 +27,7 @@ import CategoryPage from './components/CategoryPage.jsx';
 import EditChannelPage from './components/EditChannelPage.jsx'; // This should be for your main account settings
 import EditTweetPage from './components/EditTweetPage.jsx';
 import AboutPage from './components/AboutPage.jsx';
-import ChannelAboutTab from './components/ChannelAboutTab.jsx';
+import SettingsPage from './components/SettingsPage.jsx';
 // A simple fallback component to display when an error occurs during rendering.
 // This prevents the application from crashing with a blank white screen.
 const ErrorPage = () => (
@@ -110,6 +110,11 @@ const router = createBrowserRouter([
                 path: 'tweet/:tweetId/edit',
                 element: <ProtectedRoute><EditTweetPage /></ProtectedRoute>
             },
+            {
+                path: 'settings',
+                element: <ProtectedRoute><SettingsPage /></ProtectedRoute>
+            },
+
         ],
     },
 ]);

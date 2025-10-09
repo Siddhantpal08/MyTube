@@ -73,8 +73,7 @@ function Header({ onMenuClick }) {
                 {isAuthenticated ? (
                     <div className="relative" ref={dropdownRef}>
                         <button onClick={() => setIsDropdownOpen(prev => !prev)}>
-                            <img src={user?.avatar} alt={user?.username} className="w-10 h-10 rounded-full border-2 border-transparent hover:border-red-500" />
-                        </button>
+                        <img src={user?.avatar?.url || placeholderAvatar} alt={user?.username} className="w-10 h-10 rounded-full ..." />
                         {isDropdownOpen && (
                             <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1">
                                 <div className="px-4 py-2 text-sm text-red-400">{user?.username}</div>

@@ -6,12 +6,13 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Subscription } from "../models/subscription.model.js";
 
-const getTweetsAggregatePipeline = (matchStage = {}, userId = null) => {
-    // Convert userId to ObjectId if it exists, otherwise it's null
+const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
     const loggedInUserId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
+    // --- THIS IS THE FIX ---
+    // The pipeline now correctly wraps the incoming matchCondition in a $match stage.
     const pipeline = [
-        matchStage,
+        { $match: matchCondition },
         { $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" } },
         { $lookup: { from: "users", localField: "owner", foreignField: "_id", as: "owner", pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }] } },
         { $lookup: { from: "tweets", localField: "_id", foreignField: "parentTweet", as: "replies" } },
@@ -20,13 +21,11 @@ const getTweetsAggregatePipeline = (matchStage = {}, userId = null) => {
                 likesCount: { $size: "$likes" },
                 replyCount: { $size: "$replies" },
                 owner: { $first: "$owner" },
-                // --- THIS IS THE CORRECTED LOGIC ---
-                // We use $cond to ensure the $in operator is only used when a user is logged in.
                 isLiked: {
                     $cond: {
-                        if: { $eq: [loggedInUserId, null] }, // If no logged-in user
-                        then: false, // Then isLiked is always false
-                        else: { $in: [loggedInUserId, "$likes.likedBy"] } // Otherwise, check if their ID is in the likes array
+                        if: { $eq: [loggedInUserId, null] },
+                        then: false,
+                        else: { $in: [loggedInUserId, "$likes.likedBy"] }
                     }
                 }
             }
@@ -37,7 +36,7 @@ const getTweetsAggregatePipeline = (matchStage = {}, userId = null) => {
     return pipeline;
 };
 
-// --- Your other controller functions remain the same ---
+// --- CONTROLLER FUNCTIONS ---
 
 const getAllTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
@@ -64,7 +63,6 @@ const getSubscribedTweets = asyncHandler(async (req, res) => {
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
     return res.status(200).json(new ApiResponse(200, result, "Subscribed feed fetched successfully"));
 });
-
 
 // --- UPDATED: createTweet now handles replies and the "no reply to self" rule ---
 const createTweet = asyncHandler(async (req, res) => {
@@ -97,11 +95,15 @@ const getTweetById = asyncHandler(async (req, res) => {
     const { tweetId } = req.params;
     if (!isValidObjectId(tweetId)) throw new ApiError(400, "Invalid Tweet ID");
 
-    // Use the aggregation pipeline to get a single tweet with all details
-    const tweetAggregate = Tweet.aggregate(getTweetsAggregate({ $match: { _id: new mongoose.Types.ObjectId(tweetId) } }, req.user?._id));
-    const tweet = await tweetAggregate.exec();
+    // --- THIS IS ALSO FIXED ---
+    // The call to the helper now correctly passes just the match condition, not the full stage.
+    const pipeline = getTweetsAggregatePipeline({ _id: new mongoose.Types.ObjectId(tweetId) }, req.user?._id);
     
-    if (!tweet.length) throw new ApiError(404, "Tweet not found");
+    const tweet = await Tweet.aggregate(pipeline);
+    
+    if (!tweet?.length) {
+        throw new ApiError(404, "Tweet not found");
+    }
     return res.status(200).json(new ApiResponse(200, tweet[0], "Tweet fetched successfully"));
 });
 

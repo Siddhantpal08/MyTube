@@ -27,9 +27,6 @@ function SettingsPage() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Theme state
-    const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
-    
     // Redirect guest users
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -124,8 +121,8 @@ function SettingsPage() {
             <SettingsSection title="Appearance">
                 <div className="flex items-center gap-4">
                     <p className="text-gray-400">Theme:</p>
-                    <button onClick={() => setTheme('dark')} className={`font-semibold py-2 px-4 rounded-md ${theme === 'dark' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Dark</button>
-                    <button onClick={() => setTheme('light')} className={`font-semibold py-2 px-4 rounded-md ${theme === 'light' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Light</button>
+                    <button onClick={() => setTheme('dark')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'dark' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Dark</button>
+                    <button onClick={() => setTheme('light')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'light' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Light</button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">*Note: For a site-wide theme, this logic should be moved to a global ThemeContext.</p>
             </SettingsSection>

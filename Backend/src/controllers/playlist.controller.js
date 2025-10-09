@@ -65,7 +65,6 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, playlists, "User playlists fetched successfully"));
 });
 
-// 🛠️ FIXED: The video data is now "flattened" to be consistent with your other APIs
 const getPlaylistById = asyncHandler(async (req, res) => {
     const { playlistId } = req.params;
 
@@ -79,14 +78,14 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 _id: new mongoose.Types.ObjectId(playlistId),
             },
         },
-        {
+        { // This looks up the videos in the playlist
             $lookup: {
                 from: "videos",
                 localField: "videos",
                 foreignField: "_id",
                 as: "videos",
                 pipeline: [
-                    {
+                    { // This looks up the owner of each video
                         $lookup: {
                             from: "users",
                             localField: "owner",
@@ -94,30 +93,27 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                             as: "owner",
                         },
                     },
-                    {
-                        $unwind: "$owner",
-                    },
-                    {
+                    { $unwind: "$owner" },
+                    { // This projects the final video fields, flattening the URLs
                         $project: {
                             _id: 1,
+                            thumbnail: "$thumbnail.url", // Flatten thumbnail
                             title: 1,
                             duration: 1,
                             views: 1,
                             createdAt: 1,
-                            thumbnail: "$thumbnail.url",
-                            videoFile: "$videoFile.url",
                             owner: {
                                 _id: "$owner._id",
                                 username: "$owner.username",
                                 fullName: "$owner.fullName",
-                                avatar: "$owner.avatar.url",
+                                avatar: "$owner.avatar.url", // Flatten avatar
                             },
                         },
                     },
                 ],
             },
         },
-        {
+        { // This looks up the owner of the playlist itself
             $lookup: {
                 from: "users",
                 localField: "owner",
@@ -125,22 +121,19 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 as: "owner",
             },
         },
-        {
-            $unwind: "$owner",
-        },
-        {
+        { $unwind: "$owner" },
+        { // This calculates the total video and view counts
             $addFields: {
                 totalVideos: { $size: "$videos" },
                 totalViews: { $sum: "$videos.views" },
             },
         },
-        {
+        { // This projects the final playlist fields, flattening the owner's avatar
             $project: {
                 _id: 1,
                 name: 1,
                 description: 1,
                 createdAt: 1,
-                updatedAt: 1,
                 totalVideos: 1,
                 totalViews: 1,
                 videos: 1,
@@ -148,7 +141,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                     _id: "$owner._id",
                     username: "$owner.username",
                     fullName: "$owner.fullName",
-                    avatar: "$owner.avatar.url",
+                    avatar: "$owner.avatar.url", // Flatten avatar
                 },
             },
         },

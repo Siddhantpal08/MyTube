@@ -47,9 +47,29 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
             setLikesCount(prev => (originalState ? prev + 1 : prev - 1));
         }
     };
+    const handleDelete = async () => {
+        try {
+            await axiosClient.delete(`/comments/c/${comment._id}`);
+            toast.success("Comment deleted");
+            onCommentDeleted(comment._id);
+        } catch (error) {
+            toast.error("Failed to delete comment.");
+        } finally {
+            setShowDeleteModal(false);
+        }
+    };
 
-    const handleDelete = async () => { /* ... (Your existing handleDelete function) */ };
-    const handleUpdate = async (e) => { /* ... (Your existing handleUpdate function) */ };
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await axiosClient.patch(`/comments/c/${comment._id}`, { content: editedContent });
+            onCommentUpdated(response.data.data);
+            setIsEditing(false);
+            toast.success("Comment updated");
+        } catch (err) {
+            toast.error("Failed to update comment.");
+        }
+    };
 
     let avatarUrl = typeof comment.owner?.avatar === 'string' 
         ? comment.owner.avatar 

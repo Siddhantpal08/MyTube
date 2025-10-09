@@ -39,6 +39,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
         pipeline.push({ $match: match });
     }
     
+    // 1. Lookup the owner details
     pipeline.push({
         $lookup: {
             from: "users",
@@ -48,12 +49,33 @@ const getAllVideos = asyncHandler(async (req, res) => {
             pipeline: [ { $project: { username: 1, avatar: 1, fullName: 1 } } ]
         }
     });
+    
+    // 2. Flatten the owner array
     pipeline.push({ $addFields: { owner: { $first: "$owner" } } });
 
+    // 3. Add $project to explicitly select all fields, especially duration
+    // THIS IS THE FIX for NaN:NaN
+    pipeline.push({
+        $project: {
+            _id: 1,
+            title: 1,
+            description: 1,
+            thumbnail: 1,
+            videofile: 1,
+            duration: 1,      // <-- CRITICAL: Include duration
+            views: 1,
+            createdAt: 1,
+            isPublished: 1,
+            owner: 1,         // Includes the populated owner object
+        }
+    });
+
+    // 4. Sorting
     const sortStage = {};
     sortStage[sortBy || 'createdAt'] = sortType === 'asc' ? 1 : -1;
     pipeline.push({ $sort: sortStage });
 
+    // 5. Pagination
     const videoAggregate = Video.aggregate(pipeline);
     const options = { page: parseInt(page, 10), limit: parseInt(limit, 10) };
     const videos = await Video.aggregatePaginate(videoAggregate, options);

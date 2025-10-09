@@ -14,7 +14,7 @@ function PlaylistPage() {
     const [newPlaylistName, setNewPlaylistName] = useState('');
     const [newPlaylistDescription, setNewPlaylistDescription] = useState('');
 
-    // State for the new edit modal
+    // State for the edit modal
     const [editingPlaylist, setEditingPlaylist] = useState(null);
     const [updatedName, setUpdatedName] = useState('');
     const [updatedDescription, setUpdatedDescription] = useState('');
@@ -39,21 +39,42 @@ function PlaylistPage() {
 
     const handleCreatePlaylist = async (e) => {
         e.preventDefault();
-        // ... (your existing create handler)
+        if (!newPlaylistName.trim()) {
+            return toast.error("Playlist name cannot be empty.");
+        }
+        try {
+            const response = await axiosClient.post('/playlist', {
+                name: newPlaylistName,
+                description: newPlaylistDescription,
+            });
+            setPlaylists(prevPlaylists => [response.data.data, ...prevPlaylists]);
+            setNewPlaylistName('');
+            setNewPlaylistDescription('');
+            toast.success("Playlist created!");
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to create playlist.");
+        }
     };
 
     const handleDeletePlaylist = async (playlistId) => {
-        // ... (your existing delete handler)
+        if (!window.confirm("Are you sure you want to delete this playlist?")) {
+            return;
+        }
+        try {
+            await axiosClient.delete(`/playlist/${playlistId}`);
+            setPlaylists(prevPlaylists => prevPlaylists.filter(p => p._id !== playlistId));
+            toast.success("Playlist deleted");
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to delete playlist.");
+        }
     };
-
-    // --- NEW: Handler to open the edit modal ---
+    
     const openEditModal = (playlist) => {
         setEditingPlaylist(playlist);
         setUpdatedName(playlist.name);
         setUpdatedDescription(playlist.description);
     };
     
-    // --- NEW: Handler to submit the update ---
     const handleUpdatePlaylist = async (e) => {
         e.preventDefault();
         if (!editingPlaylist) return;
@@ -64,10 +85,9 @@ function PlaylistPage() {
                 description: updatedDescription,
             });
             
-            // Update the playlist in the local state
             setPlaylists(playlists.map(p => p._id === editingPlaylist._id ? response.data.data : p));
             toast.success("Playlist updated!");
-            setEditingPlaylist(null); // Close the modal
+            setEditingPlaylist(null);
         } catch (err) {
             toast.error(err.response?.data?.message || "Failed to update playlist.");
         }
@@ -81,9 +101,31 @@ function PlaylistPage() {
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-3xl font-bold mb-4">My Playlists</h1>
                 
-                {/* --- Your existing 'Create Playlist' form --- */}
+                {/* --- RESTORED: 'Create Playlist' Form --- */}
+                <div className="bg-gray-800 p-4 rounded-lg mb-8">
+                    <h2 className="text-xl font-semibold mb-3">Create a New Playlist</h2>
+                    <form onSubmit={handleCreatePlaylist} className="space-y-4">
+                        <input
+                            type="text"
+                            placeholder="Playlist Name"
+                            value={newPlaylistName}
+                            onChange={(e) => setNewPlaylistName(e.target.value)}
+                            className="w-full p-2 bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <textarea
+                            placeholder="Description"
+                            value={newPlaylistDescription}
+                            onChange={(e) => setNewPlaylistDescription(e.target.value)}
+                            className="w-full p-2 bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            rows="2"
+                        ></textarea>
+                        <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md">
+                            Create Playlist
+                        </button>
+                    </form>
+                </div>
                 
-                {/* --- NEW: Edit Playlist Modal --- */}
+                {/* --- Edit Playlist Modal --- */}
                 {editingPlaylist && (
                     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
                         <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
@@ -100,7 +142,7 @@ function PlaylistPage() {
                     </div>
                 )}
 
-                {/* --- IMPROVED: Display Existing Playlists --- */}
+                {/* --- Display Existing Playlists --- */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {playlists.length > 0 ? (
                         playlists.map((playlist) => (
@@ -122,7 +164,6 @@ function PlaylistPage() {
                                     </div>
                                 </Link>
                                 
-                                {/* --- NEW: Hover Actions (Edit & Delete) --- */}
                                 <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditModal(playlist); }} className="text-xs bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-full">Edit</button>
                                     <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeletePlaylist(playlist._id); }} className="text-xs bg-gray-700 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-full">Delete</button>

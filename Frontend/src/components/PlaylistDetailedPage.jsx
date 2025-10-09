@@ -1,30 +1,57 @@
-// src/components/PlaylistDetailPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
-import VideoCard from './VideoCard'; // We can reuse the VideoCard!
+import { useAuth } from '../Context/AuthContext'; // Import useAuth
+import toast from 'react-hot-toast'; // Import toast for notifications
+import VideoCard from './VideoCard';
 
 function PlaylistDetailPage() {
     const { playlistId } = useParams();
+    const { user } = useAuth(); // Get the current logged-in user
     const [playlist, setPlaylist] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
+    const fetchPlaylistDetails = async () => {
         if (!playlistId) return;
-        const fetchPlaylistDetails = async () => {
-            try {
-                setLoading(true);
-                const response = await axiosClient.get(`/playlist/${playlistId}`);
-                setPlaylist(response.data.data);
-            } catch (err) {
-                setError("Failed to fetch playlist details.");
-            } finally {
-                setLoading(false);
-            }
-        };
+        try {
+            setLoading(true);
+            const response = await axiosClient.get(`/playlist/${playlistId}`);
+            setPlaylist(response.data.data);
+        } catch (err) {
+            setError("Failed to fetch playlist details.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchPlaylistDetails();
     }, [playlistId]);
+
+    // --- NEW: Check if the current user owns this playlist ---
+    const isPlaylistOwner = playlist?.owner?._id === user?._id;
+
+    // --- NEW: Handler to remove a video from the playlist ---
+    const handleRemoveVideo = async (videoId) => {
+        if (!window.confirm("Are you sure you want to remove this video from the playlist?")) {
+            return;
+        }
+        try {
+            await axiosClient.patch(`/playlist/remove/${videoId}/${playlistId}`);
+            
+            // Update the state locally for an instant UI change
+            setPlaylist(prevPlaylist => ({
+                ...prevPlaylist,
+                videos: prevPlaylist.videos.filter(v => v._id !== videoId),
+                totalVideos: prevPlaylist.totalVideos - 1,
+            }));
+
+            toast.success("Video removed from playlist");
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to remove video.");
+        }
+    };
 
     if (loading) return <div className="text-white text-center p-8">Loading Playlist...</div>;
     if (error) return <div className="text-red-500 text-center p-8">{error}</div>;
@@ -41,7 +68,21 @@ function PlaylistDetailPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {playlist.videos.length > 0 ? (
-                    playlist.videos.map(video => <VideoCard key={video._id} video={video} />)
+                    playlist.videos.map(video => (
+                        <div key={video._id} className="relative group">
+                            <VideoCard video={video} />
+                            {/* --- NEW: Conditionally render a remove button --- */}
+                            {isPlaylistOwner && (
+                                <button
+                                    onClick={() => handleRemoveVideo(video._id)}
+                                    className="absolute top-2 right-2 text-white bg-red-600 hover:bg-red-700 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Remove from playlist"
+                                >
+                                    &times;
+                                </button>
+                            )}
+                        </div>
+                    ))
                 ) : (
                     <p>This playlist has no videos yet.</p>
                 )}

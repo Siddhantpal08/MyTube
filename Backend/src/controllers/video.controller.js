@@ -169,9 +169,29 @@ const getVideoById = asyncHandler(async (req, res) => {
 
     // Add to watch history for the logged-in user
     if (req.user) {
-        await User.findByIdAndUpdate(req.user._id, {
-            $addToSet: { watchHistory: videoId },
-        });
+        const userId = req.user._id;
+    
+        // 1. Remove the video ID if it's already there (to avoid duplicates, needed for $pull)
+        const user = await User.findByIdAndUpdate(
+            userId,
+            {
+                $pull: { watchHistory: new mongoose.Types.ObjectId(videoId) } 
+            },
+            { new: true } // Return the user document AFTER $pull
+        );
+    
+        if (user) {
+            // 2. Add the video ID to the beginning of the array (most recent)
+            user.watchHistory.unshift(new mongoose.Types.ObjectId(videoId)); 
+            
+            // 3. Limit the array size (e.g., to 20 videos)
+            // You can adjust the limit as needed
+            if (user.watchHistory.length > 20) {
+                user.watchHistory.pop(); // Remove the oldest item
+            }
+            
+            await user.save({ validateBeforeSave: false });
+        }
     }
     
     const finalVideo = video[0];

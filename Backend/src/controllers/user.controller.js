@@ -6,6 +6,16 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken';
 import mongoose from "mongoose";
 
+// Add these missing imports:
+import { Video } from "../models/video.model.js"; // You need this!
+import { Comment } from "../models/comment.model.js"; // Assuming you have this
+import { Tweet } from "../models/tweet.model.js"; // Assuming you have this
+import { Playlist } from "../models/playlist.model.js"; // Assuming you have this
+import { Like } from "../models/like.model.js"; // Assuming you have this
+import { Subscription } from "../models/subscription.model.js"; // Assuming you have this
+import { deleteFromCloudinary } from "../utils/cloudinary.js"; 
+import crypto from 'crypto';
+
 // --- Helper Functions ---
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
@@ -393,6 +403,7 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "User account and all associated data deleted successfully"));
 });
 
+
 // --- THE FINAL, COMPLETE EXPORT STATEMENT ---
 export { 
     registerUser,
@@ -410,5 +421,5 @@ export {
     forgotPassword,
     resetPassword,
     updateUserAbout,
-    deleteUserAccount 
+    deleteUserAccount,
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom'; // Added missing import
 import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
@@ -82,7 +83,7 @@ function CommentsSection({ videoId }) {
         setComments(prev => prev.map(c => c._id === updatedComment._id ? updatedComment : c));
     };
 
-    if (loading) return <p className="text-center text-gray-400 p-4">Loading comments...</p>;
+    if (loading) return <p className="text-center text-gray-500 dark:text-gray-400 p-4">Loading comments...</p>;
 
     return (
         <div className="mt-8">
@@ -90,12 +91,25 @@ function CommentsSection({ videoId }) {
             
             {isAuthenticated ? (
                 <form onSubmit={handleAddComment} className="flex items-start space-x-4 mb-8">
-                    <img src={user?.avatar || placeholderAvatar} alt="your avatar" className="w-10 h-10 rounded-full object-cover" />
-                    <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Add a public comment..." className="flex-grow p-2 bg-gray-700 text-white rounded-md" disabled={isPosting}/>
-                    <button type="submit" className="bg-red-600 font-semibold px-4 py-2 rounded-md h-10" disabled={isPosting || !newComment.trim()}>Comment</button>
+                    {/* Proactive Fix: Use user?.avatar?.url to match AuthContext structure */}
+                    <img src={user?.avatar?.url || placeholderAvatar} alt="your avatar" className="w-10 h-10 rounded-full object-cover" />
+                    <textarea 
+                        value={newComment} 
+                        onChange={(e) => setNewComment(e.target.value)} 
+                        placeholder="Add a public comment..." 
+                        className="flex-grow p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-black dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-red-500 outline-none transition-colors" 
+                        disabled={isPosting}
+                    />
+                    <button 
+                        type="submit" 
+                        className="bg-red-600 text-white font-semibold px-4 py-2 rounded-md h-10 disabled:opacity-50" 
+                        disabled={isPosting || !newComment.trim()}
+                    >
+                        Comment
+                    </button>
                 </form>
             ) : (
-                <div className="text-gray-400 mb-8 p-4 border border-gray-700 rounded-lg">
+                <div className="mb-8 p-4 rounded-lg border bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400">
                     <Link to="/login" className="font-semibold text-red-500 hover:text-red-400">Log in</Link> to add a comment.
                 </div>
             )}
@@ -103,13 +117,15 @@ function CommentsSection({ videoId }) {
             {error && <p className="text-red-500 text-center p-4">{error}</p>}
 
             <div className="space-y-6">
-                {/* This .map() function will now correctly render your CommentCard components */}
                 {comments.map(c => <CommentCard key={c._id} comment={c} onCommentDeleted={onCommentDeleted} onCommentUpdated={onCommentUpdated} />)}
             </div>
 
             {hasNextPage && (
                <div className="text-center mt-6">
-                   <button onClick={() => fetchComments(nextPage)} className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">
+                   <button 
+                        onClick={() => fetchComments(nextPage)} 
+                        className="px-4 py-2 rounded font-semibold bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                    >
                        Load More Comments
                    </button>
                </div>

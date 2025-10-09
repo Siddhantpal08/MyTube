@@ -1,35 +1,45 @@
-import React, { useState, useEffect } from 'react'; // THE FIX: useState and useEffect were missing
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import { timeSince, formatCompactNumber, placeholderAvatar } from '../utils/formatters';
 
-// A specialized card for the history list view
-const HistoryVideoCard = ({ video }) => (
-    <Link to={`/watch/${video._id}`} className="flex items-start w-full gap-4 group">
-        <div className="w-1/3 max-w-xs aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-gray-800">
-            <img 
-                src={video.thumbnail} 
-                alt={video.title}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-            />
-        </div>
-        <div className="flex-1">
-            <h3 className="text-lg font-semibold text-white line-clamp-2 group-hover:text-red-400">
-                {video.title}
-            </h3>
-            <div className="flex items-center space-x-2 mt-2">
-                <img src={video.owner?.avatar || placeholderAvatar} alt={video.owner?.username} className="w-6 h-6 rounded-full" />
-                <p className="text-sm text-gray-400">{video.owner?.username}</p>
+// A specialized card for the history list view, now with theme-aware styles
+const HistoryVideoCard = ({ video }) => {
+    // Robustly handle avatar URL, whether it's a direct string or an object
+    let avatarUrl = typeof video.owner?.avatar === 'string' 
+        ? video.owner.avatar 
+        : video.owner?.avatar?.url;
+    if (avatarUrl && avatarUrl.startsWith('http://')) {
+        avatarUrl = avatarUrl.replace('http://', 'https://');
+    }
+
+    return (
+        <Link to={`/watch/${video._id}`} className="flex items-start w-full gap-4 group p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+            <div className="w-1/3 max-w-xs aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-gray-200 dark:bg-gray-700">
+                <img 
+                    src={video.thumbnail} 
+                    alt={video.title}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                />
             </div>
-            <p className="text-sm text-gray-400 mt-1 line-clamp-1">
-                {video.description}
-            </p>
-            <p className="text-xs text-gray-500 mt-2">
-                {formatCompactNumber(video.views)} views • {timeSince(video.createdAt)}
-            </p>
-        </div>
-    </Link>
-);
+            <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-red-500">
+                    {video.title}
+                </h3>
+                <div className="flex items-center space-x-2 mt-2">
+                    <img src={avatarUrl || placeholderAvatar} alt={video.owner?.username} className="w-6 h-6 rounded-full" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{video.owner?.username}</p>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
+                    {video.description}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                    {formatCompactNumber(video.views)} views • {timeSince(video.createdAt)}
+                </p>
+            </div>
+        </Link>
+    );
+};
 
 
 function HistoryPage() {
@@ -56,7 +66,7 @@ function HistoryPage() {
     }, []);
 
     if (loading) {
-        return <div className="text-center p-8 text-white">Loading your history...</div>;
+        return <div className="text-center p-8">Loading your history...</div>;
     }
 
     if (error) {
@@ -65,16 +75,16 @@ function HistoryPage() {
 
     return (
         <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold text-white mb-6 border-b border-gray-700 pb-3">
+            <h1 className="text-3xl font-bold mb-6 border-b pb-3 border-gray-200 dark:border-gray-700">
                 Watch History
             </h1>
             <div className="space-y-6">
                 {history.length > 0 ? (
                     history.map(video => <HistoryVideoCard key={video._id} video={video} />)
                 ) : (
-                    <div className="text-center text-gray-400 py-16 bg-gray-800 rounded-lg">
-                        <h2 className="text-xl font-semibold">No watch history</h2>
-                        <p className="mt-2 text-sm">Videos you watch will appear here.</p>
+                    <div className="text-center py-16 rounded-lg bg-gray-100 dark:bg-gray-800">
+                        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">No watch history</h2>
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Videos you watch will appear here.</p>
                     </div>
                 )}
             </div>

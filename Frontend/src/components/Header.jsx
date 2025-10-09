@@ -43,14 +43,14 @@ function Header({ onMenuClick }) {
     }, [dropdownRef]);
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-[#0F0F0F] h-16 flex items-center justify-between px-4 border-b border-gray-800">
+        <header className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 border-b bg-white dark:bg-[#0F0F0F] border-gray-200 dark:border-gray-800 transition-colors duration-200">
             <div className="flex items-center space-x-4">
-                <button onClick={onMenuClick} className="text-white p-2 rounded-full hover:bg-gray-800 transition-colors">
+                <button onClick={onMenuClick} className="p-2 rounded-full text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <MenuIcon />
                 </button>
                 <Link to="/" className="flex items-center space-x-2">
                     <img src={myTubeLogo} alt="MyTube Logo" className="h-8 w-auto" />
-                    <span className="text-xl font-bold hidden sm:block">MyTube</span>
+                    <span className="text-xl font-bold hidden sm:block text-black dark:text-white">MyTube</span>
                 </Link>
             </div>
 
@@ -61,9 +61,9 @@ function Header({ onMenuClick }) {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search"
-                        className="w-full bg-[#121212] border border-gray-700 rounded-l-full px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                        className="w-full px-4 py-2 rounded-l-full border focus:outline-none focus:border-red-500 bg-gray-100 dark:bg-[#121212] border-gray-300 dark:border-gray-700 text-black dark:text-white"
                     />
-                    <button type="submit" className="bg-gray-800 border border-gray-700 border-l-0 rounded-r-full px-6 flex items-center justify-center hover:bg-gray-700">
+                    <button type="submit" className="px-6 flex items-center justify-center rounded-r-full border border-l-0 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700">
                         <Icon path="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" className="w-5 h-5" />
                     </button>
                 </form>
@@ -73,7 +73,6 @@ function Header({ onMenuClick }) {
                 {isAuthenticated ? (
                     <div className="relative" ref={dropdownRef}>
                         <button onClick={() => setIsDropdownOpen(prev => !prev)}>
-                            {/* 👇 --- THIS IS THE ONLY LINE THAT WAS CHANGED --- 👇 */}
                             <img 
                                 src={user?.avatar || placeholderAvatar} 
                                 alt={user?.username} 
@@ -81,12 +80,12 @@ function Header({ onMenuClick }) {
                             />
                         </button>
                         {isDropdownOpen && (
-                            <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1">
-                                <div className="px-4 py-2 text-sm text-red-400">{user?.username}</div>
-                                <div className="border-t border-gray-700"></div>
-                                <Link to={`/channel/${user?.username}`} onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Your Channel</Link>
-                                <Link to="/creator/dashboard" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Studio</Link>
-                                <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-red-400 hover:bg-gray-700">Logout</button>
+                            <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <div className="px-4 py-2 text-sm text-red-600 dark:text-red-400">{user?.username}</div>
+                                <div className="border-t border-gray-200 dark:border-gray-700"></div>
+                                <Link to={`/channel/${user?.username}`} onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Your Channel</Link>
+                                <Link to="/creator/dashboard" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Studio</Link>
+                                <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</button>
                             </div>
                         )}
                     </div>

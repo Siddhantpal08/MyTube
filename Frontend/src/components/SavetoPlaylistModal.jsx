@@ -1,4 +1,3 @@
-// src/components/SaveToPlaylistModal.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
@@ -7,18 +6,20 @@ import toast from 'react-hot-toast';
 function SaveToPlaylistModal({ videoId, onClose }) {
     const { user } = useAuth();
     const [playlists, setPlaylists] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!user?._id || !videoId) return;
         
-        // MODIFIED: Send the videoId as a query parameter to the backend
+        setLoading(true);
         axiosClient.get(`/playlist/user/${user._id}?videoId=${videoId}`)
             .then(response => {
                 setPlaylists(response.data.data);
-            });
+            })
+            .catch(() => toast.error("Could not load playlists."))
+            .finally(() => setLoading(false));
     }, [user?._id, videoId]);
 
-    // NEW: A single handler for both adding and removing
     const handleToggleVideoInPlaylist = async (playlistId, isAlreadyAdded) => {
         const action = isAlreadyAdded ? 'remove' : 'add';
         const toastId = toast.loading(`${action === 'add' ? 'Adding' : 'Removing'} video...`);
@@ -26,14 +27,13 @@ function SaveToPlaylistModal({ videoId, onClose }) {
         try {
             await axiosClient.patch(`/playlist/${action}/${videoId}/${playlistId}`);
             
-            // Optimistically update the UI for instant feedback
             setPlaylists(prevPlaylists =>
                 prevPlaylists.map(p =>
                     p._id === playlistId ? { ...p, containsCurrentVideo: !isAlreadyAdded } : p
                 )
             );
 
-            toast.success(`Video ${action === 'add' ? 'added' : 'removed'} successfully!`, { id: toastId });
+            toast.success(`Video ${action === 'add' ? 'added' : 'removed'}!`, { id: toastId });
         } catch (err) {
             const errorMessage = err.response?.data?.message || `Failed to ${action} video.`;
             toast.error(errorMessage, { id: toastId });
@@ -41,29 +41,39 @@ function SaveToPlaylistModal({ videoId, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
-            <div className="bg-gray-800 p-6 rounded-lg w-full max-w-sm">
-                <h2 className="text-xl font-bold mb-4">Save to...</h2>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {playlists.map(playlist => (
-                        <div key={playlist._id} className="flex justify-between items-center p-2 bg-gray-700 rounded">
-                            <span>{playlist.name}</span>
-                            
-                            {/* MODIFIED: Conditional button text, style, and action */}
-                            <button 
-                                onClick={() => handleToggleVideoInPlaylist(playlist._id, playlist.containsCurrentVideo)}
-                                className={`px-3 py-1 rounded font-semibold ${
-                                    playlist.containsCurrentVideo 
-                                    ? 'bg-gray-500 hover:bg-gray-400' 
-                                    : 'bg-indigo-600 hover:bg-indigo-500'
-                                }`}
-                            >
-                                {playlist.containsCurrentVideo ? 'Remove' : 'Add'}
-                            </button>
-                        </div>
-                    ))}
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
+            <div className="w-full max-w-sm rounded-lg shadow-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h2 className="text-xl font-bold">Save to...</h2>
                 </div>
-                <button onClick={onClose} className="mt-4 w-full bg-gray-600 py-2 rounded">Close</button>
+                <div className="p-6 space-y-2 max-h-60 overflow-y-auto">
+                    {loading ? (
+                        <p className="text-center text-gray-500 dark:text-gray-400">Loading playlists...</p>
+                    ) : playlists.length > 0 ? (
+                        playlists.map(playlist => (
+                            <div key={playlist._id} className="flex justify-between items-center p-2 rounded bg-gray-100 dark:bg-gray-700">
+                                <span className="font-medium">{playlist.name}</span>
+                                <button 
+                                    onClick={() => handleToggleVideoInPlaylist(playlist._id, playlist.containsCurrentVideo)}
+                                    className={`px-3 py-1 rounded font-semibold text-white ${
+                                        playlist.containsCurrentVideo 
+                                        ? 'bg-gray-500 hover:bg-gray-400' 
+                                        : 'bg-red-600 hover:bg-red-500'
+                                    }`}
+                                >
+                                    {playlist.containsCurrentVideo ? 'Remove' : 'Add'}
+                                </button>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-center text-gray-500 dark:text-gray-400">You have no playlists yet.</p>
+                    )}
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg">
+                    <button onClick={onClose} className="w-full font-semibold py-2 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
+                        Close
+                    </button>
+                </div>
             </div>
         </div>
     );

@@ -1,4 +1,3 @@
-// src/components/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../Api/axiosClient';
 import VideoCard from './VideoCard'; // Reusing our existing component
@@ -9,13 +8,11 @@ function Dashboard() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Assuming your premade backend has an endpoint to get videos from subscribed channels
         const fetchSubscribedVideos = async () => {
             try {
                 setLoading(true);
                 const response = await axiosClient.get('/dashboard/videos');
-                // The exact path to the videos array might differ based on your API
-                setVideos(response.data.data); 
+                setVideos(response.data.data);
                 setError(null);
             } catch (err) {
                 setError("Could not fetch your subscription feed.");
@@ -29,7 +26,7 @@ function Dashboard() {
     }, []);
 
     if (loading) {
-        return <div className="text-center text-white p-8">Loading your feed...</div>;
+        return <div className="text-center p-8 text-gray-800 dark:text-white">Loading your feed...</div>;
     }
 
     if (error) {
@@ -38,7 +35,7 @@ function Dashboard() {
 
     return (
         <div className="p-4">
-            <h1 className="text-2xl font-bold text-white mb-6">From Your Subscriptions</h1>
+            <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">From Your Subscriptions</h1>
             {videos.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {videos.map((video) => (
@@ -46,7 +43,7 @@ function Dashboard() {
                     ))}
                 </div>
             ) : (
-                <div className="text-center text-gray-400 p-8">
+                <div className="text-center p-8 text-gray-500 dark:text-gray-400">
                     <p>No new videos from your subscriptions.</p>
                     <p className="text-sm">Subscribe to more channels to see their latest videos here!</p>
                 </div>

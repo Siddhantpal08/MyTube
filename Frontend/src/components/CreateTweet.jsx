@@ -25,11 +25,9 @@ function CreateTweet({ onTweetCreated }) {
             
             toast.success("Post published successfully!", { id: toastId });
 
-            // If a callback is provided, use it. This is useful if the form is in a modal.
             if (onTweetCreated) {
                 onTweetCreated(response.data.data);
             } else {
-                // Otherwise, navigate back to the community feed.
                 navigate('/community');
             }
 
@@ -42,18 +40,19 @@ function CreateTweet({ onTweetCreated }) {
     };
 
     return (
-        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+        <div className="p-4 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <div className="flex items-start space-x-4">
-                <img src={user?.avatar || placeholderAvatar} alt={user?.username} className="w-12 h-12 rounded-full object-cover" />
+                {/* Proactive Fix: Use user?.avatar?.url */}
+                <img src={user?.avatar?.url || placeholderAvatar} alt={user?.username} className="w-12 h-12 rounded-full object-cover" />
                 <form onSubmit={handleSubmit} className="flex-1">
                     <textarea
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
                         placeholder={`What's on your mind, ${user?.username}?`}
-                        className="w-full h-28 p-2 bg-transparent text-white text-lg placeholder-gray-500 focus:outline-none resize-none"
+                        className="w-full h-28 p-2 bg-transparent text-lg focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-500"
                         maxLength="280"
                     />
-                    <div className="flex justify-end items-center mt-2 border-t border-gray-700 pt-3">
+                    <div className="flex justify-end items-center mt-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                         <span className="text-sm text-gray-500 mr-4">{content.length} / 280</span>
                         <button
                             type="submit"

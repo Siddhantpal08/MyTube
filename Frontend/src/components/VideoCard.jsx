@@ -49,6 +49,8 @@ function VideoCard({ video }) {
             e.preventDefault();
             return;
         }
+        // This prevents the default link behavior to allow navigate() to handle it,
+        // which is useful in single-page applications.
         e.preventDefault(); 
         navigate(`/channel/${video.owner.username}`);
     };
@@ -56,7 +58,7 @@ function VideoCard({ video }) {
     return (
         <div className="w-full sm:w-72 flex-shrink-0 group">
             <Link to={videoLink}>
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800">
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-800">
                     <img 
                         src={thumbnailUrl} // Use the new robust variable
                         alt={video.title} 
@@ -70,7 +72,7 @@ function VideoCard({ video }) {
             </Link>
             <div className="mt-2 flex items-start space-x-3">
                 <Link to={isChannelLinkable ? `/channel/${video.owner.username}` : '#'} onClick={handleChannelClick} className="flex-shrink-0 mt-1">
-                    <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-600">
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600">
                         <img 
                             src={avatarUrl || placeholderAvatar} // Use the new robust variable
                             alt={channelName}
@@ -80,14 +82,14 @@ function VideoCard({ video }) {
                 </Link>
                 <div>
                     <Link to={videoLink}>
-                        <h3 className="text-white font-semibold text-md overflow-hidden text-ellipsis h-12" title={video.title}>
+                        <h3 className="text-black dark:text-white font-semibold text-md overflow-hidden text-ellipsis h-12" title={video.title}>
                             {video.title.length > 50 ? `${video.title.substring(0, 50)}...` : video.title}
                         </h3>
                     </Link>
                     <Link to={isChannelLinkable ? `/channel/${video.owner.username}` : '#'} onClick={handleChannelClick}>
-                        <p className={`text-sm text-gray-400 mt-1 ${isChannelLinkable ? 'hover:text-white' : 'cursor-default'} transition-colors`}>{channelName}</p>
+                        <p className={`text-sm text-gray-600 dark:text-gray-400 mt-1 ${isChannelLinkable ? 'hover:text-black dark:hover:text-white' : 'cursor-default'} transition-colors`}>{channelName}</p>
                     </Link>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                         {formatCompactNumber(video.views || 0)} views • {timeSince(video.createdAt || video.publishTime)}
                     </p>
                 </div>

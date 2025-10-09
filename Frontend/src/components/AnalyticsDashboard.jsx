@@ -1,20 +1,22 @@
-// src/components/AnalyticsDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../Api/axiosClient';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useTheme } from '../Context/ThemeContext'; // Import useTheme
 
-// A simple card for displaying a key statistic
+// StatCard now has theme-aware styles
 const StatCard = ({ title, value }) => (
-    <div className="bg-gray-800 p-6 rounded-lg">
-        <h3 className="text-sm font-medium text-gray-400">{title}</h3>
-        <p className="text-3xl font-bold text-white mt-2">{value?.toLocaleString() || 0}</p>
+    <div className="p-6 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</h3>
+        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{value?.toLocaleString() || 0}</p>
     </div>
 );
 
 function AnalyticsDashboard() {
+    const { theme } = useTheme(); // Get the current theme
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -32,6 +34,13 @@ function AnalyticsDashboard() {
         fetchStats();
     }, []);
 
+
+    
+    // Define chart colors based on the theme
+    const gridColor = theme === 'dark' ? '#4A5568' : '#E2E8F0';
+    const textColor = theme === 'dark' ? '#A0AEC0' : '#4A5568';
+    const tooltipBg = theme === 'dark' ? '#1A202C' : '#FFFFFF';
+
     if (loading) return <div className="text-center p-8">Loading analytics...</div>;
     if (error) return <div className="text-center text-red-500 p-8">{error}</div>;
     if (!stats) return <div className="text-center p-8">No analytics data available.</div>;
@@ -44,7 +53,6 @@ function AnalyticsDashboard() {
 
     return (
         <div>
-            {/* Stat Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 <StatCard title="Total Views" value={stats.totalViews} />
                 <StatCard title="Total Subscribers" value={stats.totalSubscribers} />
@@ -52,25 +60,17 @@ function AnalyticsDashboard() {
                 <StatCard title="Total Videos" value={stats.totalVideos} />
             </div>
 
-            {/* Views Chart */}
-            <div className="bg-gray-800 p-6 rounded-lg">
+            <div className="p-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                 <h3 className="font-bold text-lg mb-4">Likes (Last 30 Days)</h3>
                 <div style={{ width: '100%', height: 300 }}>
                     <ResponsiveContainer>
                         <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                            <XAxis dataKey="date" stroke="#A0AEC0" />
-                            <YAxis stroke="#A0AEC0" />
-                            <Tooltip contentStyle={{ backgroundColor: '#1A202C', border: 'none', borderRadius: '0.5rem' }} />
+                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                            <XAxis dataKey="date" stroke={textColor} />
+                            <YAxis stroke={textColor} />
+                            <Tooltip contentStyle={{ backgroundColor: tooltipBg, border: '1px solid #4A5568', borderRadius: '0.5rem' }} />
                             <Legend />
-                            <Line 
-                                type="monotone" 
-                                dataKey="views" 
-                                name="Likes per day" 
-                                stroke="#8B5CF6" 
-                                strokeWidth={2} 
-                                activeDot={{ r: 8 }} 
-                            />
+                            <Line type="monotone" dataKey="views" name="Likes per day" stroke="#8B5CF6" strokeWidth={2} activeDot={{ r: 8 }} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

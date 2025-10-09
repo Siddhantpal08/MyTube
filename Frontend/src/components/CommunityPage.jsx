@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import { useAuth } from '../Context/AuthContext';
 import toast from 'react-hot-toast';
-import TweetCard from './TweetCard'; // Import the new, smart TweetCard
+import TweetCard from '../components/TweetCard'; // Ensure this path is correct
 
 function CommunityPage() {
     const { isAuthenticated } = useAuth();
@@ -38,25 +38,24 @@ function CommunityPage() {
     }, [feedType, isAuthenticated]);
 
     const handleDeleteTweet = async (tweetId) => {
-        // Optimistically remove the tweet from the UI for an instant feel
         setTweets(prevTweets => prevTweets.filter(tweet => tweet._id !== tweetId));
         try {
             await axiosClient.delete(`/tweets/${tweetId}`);
             toast.success("Post deleted");
         } catch (error) {
             console.error("Failed to delete tweet:", error);
-            // In a real app, you would add the tweet back to the UI on failure
             toast.error("Failed to delete post.");
+            // Consider re-fetching or adding the tweet back to the UI on failure
         }
     };
 
-    if (loading) return <div className="text-center text-white p-8">Loading Feed...</div>;
+    if (loading) return <div className="text-center p-8">Loading Feed...</div>;
     if (error) return <div className="text-center text-red-500 p-8">{error}</div>;
 
     return (
         <div className="max-w-3xl mx-auto">
             <div className="flex justify-between items-center mb-4">
-                <h1 className="text-3xl font-bold text-white">{pageTitle}</h1>
+                <h1 className="text-3xl font-bold">{pageTitle}</h1>
                 {isAuthenticated && (
                     <Link to="/add-tweet" className="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700">
                         Add Post
@@ -64,11 +63,21 @@ function CommunityPage() {
                 )}
             </div>
 
-            {/* --- Feed Toggle Buttons for logged-in users --- */}
+            {/* --- Feed Toggle Buttons --- */}
             {isAuthenticated && (
-                <div className="flex space-x-2 border-b border-gray-700 mb-6">
-                    <button onClick={() => setFeedType('subscribed')} className={`py-2 px-4 font-semibold ${feedType === 'subscribed' ? 'text-white border-b-2 border-white' : 'text-gray-400'}`}>For You</button>
-                    <button onClick={() => setFeedType('global')} className={`py-2 px-4 font-semibold ${feedType === 'global' ? 'text-white border-b-2 border-white' : 'text-gray-400'}`}>Global</button>
+                <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700 mb-6">
+                    <button 
+                        onClick={() => setFeedType('subscribed')} 
+                        className={`py-2 px-4 font-semibold ${feedType === 'subscribed' ? 'text-red-600 dark:text-white border-b-2 border-red-600 dark:border-white' : 'text-gray-500 dark:text-gray-400'}`}
+                    >
+                        For You
+                    </button>
+                    <button 
+                        onClick={() => setFeedType('global')} 
+                        className={`py-2 px-4 font-semibold ${feedType === 'global' ? 'text-red-600 dark:text-white border-b-2 border-red-600 dark:border-white' : 'text-gray-500 dark:text-gray-400'}`}
+                    >
+                        Global
+                    </button>
                 </div>
             )}
             
@@ -76,9 +85,9 @@ function CommunityPage() {
                 {tweets.length > 0 ? (
                     tweets.map((tweet) => <TweetCard key={tweet._id} tweet={tweet} onDelete={handleDeleteTweet} />)
                 ) : (
-                    <div className="text-center text-gray-400 py-16 bg-gray-800 rounded-lg">
-                        <h2 className="text-xl font-semibold">The feed is quiet</h2>
-                        <p className="mt-2 text-sm">{emptyMessage}</p>
+                    <div className="text-center py-16 rounded-lg bg-gray-100 dark:bg-gray-800">
+                        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">The feed is quiet</h2>
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{emptyMessage}</p>
                     </div>
                 )}
             </div>

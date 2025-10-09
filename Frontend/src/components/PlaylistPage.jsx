@@ -10,11 +10,9 @@ function PlaylistPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // State for creating a new playlist
     const [newPlaylistName, setNewPlaylistName] = useState('');
     const [newPlaylistDescription, setNewPlaylistDescription] = useState('');
 
-    // State for the edit modal
     const [editingPlaylist, setEditingPlaylist] = useState(null);
     const [updatedName, setUpdatedName] = useState('');
     const [updatedDescription, setUpdatedDescription] = useState('');
@@ -47,6 +45,7 @@ function PlaylistPage() {
                 name: newPlaylistName,
                 description: newPlaylistDescription,
             });
+            // Add the new playlist to the top for immediate feedback
             setPlaylists(prevPlaylists => [response.data.data, ...prevPlaylists]);
             setNewPlaylistName('');
             setNewPlaylistDescription('');
@@ -93,16 +92,15 @@ function PlaylistPage() {
         }
     };
 
-    if (loading) return <div className="text-white text-center p-8">Loading...</div>;
+    if (loading) return <div className="text-center p-8">Loading...</div>;
     if (error) return <div className="text-red-500 text-center p-8">Error: {error}</div>;
 
     return (
-        <div className="p-4 md:p-8 text-white">
+        <div className="p-4 md:p-8">
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-3xl font-bold mb-4">My Playlists</h1>
                 
-                {/* --- RESTORED: 'Create Playlist' Form --- */}
-                <div className="bg-gray-800 p-4 rounded-lg mb-8">
+                <div className="p-4 rounded-lg mb-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <h2 className="text-xl font-semibold mb-3">Create a New Playlist</h2>
                     <form onSubmit={handleCreatePlaylist} className="space-y-4">
                         <input
@@ -110,31 +108,30 @@ function PlaylistPage() {
                             placeholder="Playlist Name"
                             value={newPlaylistName}
                             onChange={(e) => setNewPlaylistName(e.target.value)}
-                            className="w-full p-2 bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full p-2 rounded-md bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 border border-gray-300 dark:border-gray-600"
                         />
                         <textarea
                             placeholder="Description"
                             value={newPlaylistDescription}
                             onChange={(e) => setNewPlaylistDescription(e.target.value)}
-                            className="w-full p-2 bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full p-2 rounded-md bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 border border-gray-300 dark:border-gray-600"
                             rows="2"
                         ></textarea>
-                        <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md">
+                        <button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">
                             Create Playlist
                         </button>
                     </form>
                 </div>
                 
-                {/* --- Edit Playlist Modal --- */}
                 {editingPlaylist && (
                     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-                        <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+                        <div className="p-6 rounded-lg w-full max-w-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">Edit Playlist</h2>
                             <form onSubmit={handleUpdatePlaylist} className="space-y-4">
-                                <input type="text" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md" />
-                                <textarea value={updatedDescription} onChange={(e) => setUpdatedDescription(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md" rows="3"></textarea>
+                                <input type="text" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} className="w-full p-2 rounded-md bg-gray-100 dark:bg-gray-700" />
+                                <textarea value={updatedDescription} onChange={(e) => setUpdatedDescription(e.target.value)} className="w-full p-2 rounded-md bg-gray-100 dark:bg-gray-700" rows="3"></textarea>
                                 <div className="flex justify-end gap-4">
-                                    <button type="button" onClick={() => setEditingPlaylist(null)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+                                    <button type="button" onClick={() => setEditingPlaylist(null)} className="font-bold py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
                                     <button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">Save Changes</button>
                                 </div>
                             </form>
@@ -142,36 +139,35 @@ function PlaylistPage() {
                     </div>
                 )}
 
-                {/* --- Display Existing Playlists --- */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {playlists.length > 0 ? (
                         playlists.map((playlist) => (
-                            <div key={playlist._id} className="relative group bg-gray-800 rounded-lg overflow-hidden">
+                            <div key={playlist._id} className="relative group rounded-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                                 <Link to={`/playlist/${playlist._id}`}>
-                                    <div className="w-full aspect-video bg-gray-700">
+                                    <div className="w-full aspect-video bg-gray-200 dark:bg-gray-700">
                                         {playlist.thumbnail ? (
                                             <img src={playlist.thumbnail} alt={playlist.name} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
-                                                <svg className="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
+                                                <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
                                             </div>
                                         )}
                                     </div>
                                     <div className="p-4">
                                         <h2 className="font-bold text-lg truncate">{playlist.name}</h2>
-                                        <p className="text-sm text-gray-400 mt-1 truncate">{playlist.description}</p>
-                                        <p className="text-sm text-gray-400 mt-2">{playlist.totalVideos || 0} videos</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">{playlist.description}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{playlist.totalVideos || 0} videos</p>
                                     </div>
                                 </Link>
                                 
                                 <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditModal(playlist); }} className="text-xs bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-full">Edit</button>
-                                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeletePlaylist(playlist._id); }} className="text-xs bg-gray-700 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-full">Delete</button>
+                                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditModal(playlist); }} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-full">Edit</button>
+                                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeletePlaylist(playlist._id); }} className="text-xs bg-red-600 hover:bg-red-500 text-white font-semibold py-1 px-3 rounded-full">Delete</button>
                                 </div>
                             </div>
                         ))
                     ) : (
-                        <p className="col-span-3 text-center text-gray-400">No playlists found. Create one above!</p>
+                        <p className="col-span-full text-center text-gray-500 dark:text-gray-400">No playlists found. Create one above!</p>
                     )}
                 </div>
             </div>

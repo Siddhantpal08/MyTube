@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../Api/axiosClient';
-import VideoCard from './VideoCard';
-import SkeletonCard from './SkeletonCard';
+import VideoCard from '../components/VideoCard';
+import SkeletonCard from '../components/SkeletonCard';
 import { Link } from 'react-router-dom';
 
 function ExplorePage() {
@@ -14,7 +14,6 @@ function ExplorePage() {
             setLoading(true);
             setError(null);
             try {
-                // This endpoint fetches all videos from your own database
                 const response = await axiosClient.get('/videos');
                 setVideos(response.data?.data?.docs || []);
             } catch (err) {
@@ -42,7 +41,7 @@ function ExplorePage() {
 
     return (
         <div className="p-4">
-            <h1 className="text-3xl font-bold text-white mb-6 border-b border-gray-700 pb-3">
+            <h1 className="text-3xl font-bold mb-6 border-b pb-3 border-gray-200 dark:border-gray-700">
                 Explore All Videos
             </h1>
             {videos.length > 0 ? (
@@ -52,7 +51,7 @@ function ExplorePage() {
                     ))}
                 </div>
             ) : (
-                <div className="text-center text-gray-400 py-16">
+                <div className="text-center py-16 text-gray-500 dark:text-gray-400">
                     <h2 className="text-xl font-semibold">No Videos Yet</h2>
                     <p className="mt-2 text-sm">Be the first one to upload a video!</p>
                     <Link to="/upload-video" className="mt-4 inline-block bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700">

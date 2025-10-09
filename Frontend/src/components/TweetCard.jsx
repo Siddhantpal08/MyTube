@@ -86,7 +86,7 @@ const TweetCard = ({ tweet, onDelete, isReply = false }) => {
     };
 
     return (
-        <div className={`flex flex-col space-y-4 ${!isReply ? 'bg-gray-800 p-4 rounded-lg border border-gray-700' : ''}`}>
+        <div className={`flex flex-col space-y-4 ${!isReply ? 'bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700' : ''}`}>
             <div className="flex items-start space-x-4 w-full">
                 <Link to={`/channel/${tweet.owner?.username}`}>
                     <img src={tweet.owner?.avatar || placeholderAvatar} alt={tweet.owner?.username} className="w-12 h-12 rounded-full object-cover" />
@@ -94,25 +94,25 @@ const TweetCard = ({ tweet, onDelete, isReply = false }) => {
                 <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
                         <div className="flex items-center flex-wrap space-x-2">
-                            <Link to={`/channel/${tweet.owner?.username}`} className="font-bold text-white hover:underline truncate">{tweet.owner?.fullName}</Link>
-                            <span className="text-gray-400 text-sm truncate">@{tweet.owner?.username}</span>
+                            <Link to={`/channel/${tweet.owner?.username}`} className="font-bold text-black dark:text-white hover:underline truncate">{tweet.owner?.fullName}</Link>
+                            <span className="text-gray-600 dark:text-gray-400 text-sm truncate">@{tweet.owner?.username}</span>
                             <span className="text-gray-500 text-sm flex-shrink-0">· {timeSince(tweet.createdAt)}</span>
                         </div>
                         {isOwner && (
-                            <button onClick={() => onDelete(tweet._id)} title="Delete" className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-gray-700 ml-2">
+                            <button onClick={() => onDelete(tweet._id)} title="Delete" className="text-gray-500 dark:text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 ml-2">
                                 <DeleteIcon />
                             </button>
                         )}
                     </div>
-                    <p className="text-gray-300 mt-1 whitespace-pre-wrap break-words">{tweet.content}</p>
+                    <p className="text-gray-800 dark:text-gray-300 mt-1 whitespace-pre-wrap break-words">{tweet.content}</p>
                     <div className="mt-3 flex items-center space-x-6">
-                        <button onClick={() => setShowReplyInput(prev => !prev)} disabled={isOwner} className="flex items-center gap-2 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button onClick={() => setShowReplyInput(prev => !prev)} disabled={isOwner} className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
                             <ReplyIcon />
                             <span className="text-xs">{formatCompactNumber(replyCount)}</span>
                         </button>
                         <button onClick={handleLikeToggle} className="flex items-center gap-2">
                             <HeartIcon isLiked={isLiked} />
-                            <span className={`text-xs font-semibold ${isLiked ? 'text-red-500' : 'text-gray-400'}`}>{formatCompactNumber(likesCount)}</span>
+                            <span className={`text-xs font-semibold ${isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>{formatCompactNumber(likesCount)}</span>
                         </button>
                     </div>
                 </div>
@@ -126,12 +126,12 @@ const TweetCard = ({ tweet, onDelete, isReply = false }) => {
                             value={replyContent}
                             onChange={(e) => setReplyContent(e.target.value)}
                             placeholder={`Replying to @${tweet.owner?.username}`} 
-                            className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-2 focus:ring-red-500 outline-none"
+                            className="w-full p-2 bg-gray-100 dark:bg-gray-700 text-black dark:text-white rounded-md focus:ring-2 focus:ring-red-500 outline-none border border-gray-300 dark:border-transparent"
                             rows="2"
                             disabled={isReplying}
                         />
                         <div className="text-right mt-2">
-                            <button type="submit" className="bg-red-600 font-semibold px-4 py-2 rounded-md disabled:opacity-50" disabled={isReplying || !replyContent.trim()}>
+                            <button type="submit" className="bg-red-600 text-white font-semibold px-4 py-2 rounded-md disabled:opacity-50" disabled={isReplying || !replyContent.trim()}>
                                 {isReplying ? 'Posting...' : 'Reply'}
                             </button>
                         </div>
@@ -141,13 +141,13 @@ const TweetCard = ({ tweet, onDelete, isReply = false }) => {
 
             {replyCount > 0 && (
                 <div className="pl-16">
-                    <button onClick={handleToggleReplies} className="text-sm font-semibold text-red-400 hover:underline flex items-center">
+                    <button onClick={handleToggleReplies} className="text-sm font-semibold text-red-500 dark:text-red-400 hover:underline flex items-center gap-1">
                         <ViewRepliesIcon />
                         {showReplies ? 'Hide Replies' : `View ${replyCount} ${replyCount > 1 ? 'Replies' : 'Reply'}`}
                     </button>
-                    {loadingReplies && <p className="text-sm text-gray-400 mt-2">Loading replies...</p>}
+                    {loadingReplies && <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Loading replies...</p>}
                     {showReplies && !loadingReplies && (
-                        <div className="mt-4 space-y-4 border-l-2 border-gray-700 pl-4">
+                        <div className="mt-4 space-y-4 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
                             {replies.map(reply => (
                                 <TweetCard key={reply._id} tweet={reply} onDelete={onDelete} isReply={true} />
                             ))}

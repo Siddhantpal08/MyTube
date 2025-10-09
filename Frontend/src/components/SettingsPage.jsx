@@ -9,8 +9,8 @@ import ConfirmationModal from '../components/ConfirmationModel';
 
 // Reusable component for each settings section card
 const SettingsSection = ({ title, children, isDangerZone = false }) => (
-    <div className={`p-6 rounded-lg mb-8 ${isDangerZone ? 'bg-red-900/20 border border-red-500/30' : 'bg-gray-800'}`}>
-        <h2 className={`text-xl font-semibold mb-6 border-b pb-3 ${isDangerZone ? 'text-red-400 border-red-500/30' : 'border-gray-700'}`}>{title}</h2>
+    <div className={`p-6 rounded-lg mb-8 transition-colors duration-200 ${isDangerZone ? 'bg-red-900/20 border border-red-500/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
+        <h2 className={`text-xl font-semibold mb-6 border-b pb-3 ${isDangerZone ? 'text-red-500 dark:text-red-400 border-red-500/30' : 'border-gray-300 dark:border-gray-700'}`}>{title}</h2>
         {children}
     </div>
 );
@@ -18,7 +18,7 @@ const SettingsSection = ({ title, children, isDangerZone = false }) => (
 function SettingsPage() {
     // --- HOOKS ---
     const { user, setUser, isAuthenticated, logout, loading: authLoading } = useAuth();
-    const { theme, setTheme } = useTheme(); // Use the global theme context
+    const { theme, setTheme } = useTheme();
     const navigate = useNavigate();
     
     // --- STATE MANAGEMENT ---
@@ -26,9 +26,12 @@ function SettingsPage() {
     const [email, setEmail] = useState('');
     const [avatarFile, setAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState('');
+    const [coverImageFile, setCoverImageFile] = useState(null);
+    const [coverImagePreview, setCoverImagePreview] = useState('');
+    const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // (Add other states like cover image or password here if you expand the page)
 
     // --- EFFECTS ---
 
@@ -46,6 +49,7 @@ function SettingsPage() {
             setFullName(user.fullName || '');
             setEmail(user.email || '');
             setAvatarPreview(user.avatar || placeholderAvatar);
+            setCoverImagePreview(user.coverImage || '');
         }
     }, [user]);
     
@@ -61,7 +65,7 @@ function SettingsPage() {
 
     const handleAvatarUpdate = async (e) => {
         e.preventDefault();
-        if (!avatarFile) return toast.error("Please select a file first.");
+        if (!avatarFile) return toast.error("Please select an image file.");
         const formData = new FormData();
         formData.append("avatar", avatarFile);
         
@@ -69,9 +73,29 @@ function SettingsPage() {
         const toastId = toast.loading("Uploading avatar...");
         try {
             const response = await axiosClient.patch('/users/avatar', formData);
-            setUser(response.data.data); // Update global user state
+            setUser(response.data.data);
             toast.success("Avatar updated!", { id: toastId });
-            setAvatarFile(null); // Clear the file input
+            setAvatarFile(null);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Upload failed.", { id: toastId });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleCoverImageUpdate = async (e) => {
+        e.preventDefault();
+        if (!coverImageFile) return toast.error("Please select an image file.");
+        const formData = new FormData();
+        formData.append("coverImage", coverImageFile);
+
+        setIsSubmitting(true);
+        const toastId = toast.loading("Uploading cover image...");
+        try {
+            const response = await axiosClient.patch('/users/cover-image', formData);
+            setUser(response.data.data);
+            toast.success("Cover image updated!", { id: toastId });
+            setCoverImageFile(null);
         } catch (error) {
             toast.error(error.response?.data?.message || "Upload failed.", { id: toastId });
         } finally {
@@ -82,13 +106,31 @@ function SettingsPage() {
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        const toastId = toast.loading("Updating profile...");
+        const toastId = toast.loading("Updating details...");
         try {
             const response = await axiosClient.patch('/users/update-account', { fullName, email });
             setUser(response.data.data);
-            toast.success("Profile updated!", { id: toastId });
+            toast.success("Details updated!", { id: toastId });
         } catch (error) {
             toast.error(error.response?.data?.message || "Update failed.", { id: toastId });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handlePasswordChange = async (e) => {
+        e.preventDefault();
+        if (!oldPassword || !newPassword) return toast.error("Please fill all password fields.");
+        
+        setIsSubmitting(true);
+        const toastId = toast.loading("Changing password...");
+        try {
+            await axiosClient.post('/users/change-password', { oldPassword, newPassword });
+            toast.success("Password changed successfully!", { id: toastId });
+            setOldPassword('');
+            setNewPassword('');
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to change password.", { id: toastId });
         } finally {
             setIsSubmitting(false);
         }
@@ -100,68 +142,78 @@ function SettingsPage() {
         try {
             await axiosClient.delete('/users');
             toast.success("Account deleted successfully.", { id: toastId });
-            logout(); // Log out the user from the frontend
-            navigate('/'); // Redirect to the homepage
+            logout();
+            navigate('/');
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to delete account.", { id: toastId });
-            setIsSubmitting(false); // Only reset submitting state on failure
+            setIsSubmitting(false);
         } finally {
             setShowDeleteModal(false);
         }
     };
     
     if (authLoading || !user) {
-        return <div className="text-center text-white p-8">Loading Settings...</div>;
+        return <div className="text-center p-8">Loading Settings...</div>;
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-4 md:p-8 text-white">
-            {showDeleteModal && ( 
-                <ConfirmationModal 
-                    title="Delete Account" 
-                    message="Are you sure? This action is permanent and all your data will be lost." 
-                    onConfirm={handleDeleteAccount} 
-                    onCancel={() => setShowDeleteModal(false)} 
-                /> 
-            )}
-
+        <div className="max-w-4xl mx-auto p-4 md:p-8">
+            {showDeleteModal && ( <ConfirmationModal title="Delete Account" message="Are you sure? This action is permanent and all your data will be lost." onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} /> )}
+            
             <h1 className="text-3xl font-bold mb-8">Settings</h1>
 
             <SettingsSection title="Appearance">
                 <div className="flex items-center gap-4">
-                    <p className="text-gray-400">Theme:</p>
-                    <button onClick={() => setTheme('dark')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'dark' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Dark</button>
-                    <button onClick={() => setTheme('light')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'light' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Light</button>
+                    <p className="text-gray-600 dark:text-gray-400">Theme:</p>
+                    <button onClick={() => setTheme('dark')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'dark' ? 'bg-red-600 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>Dark</button>
+                    <button onClick={() => setTheme('light')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'light' ? 'bg-red-600 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>Light</button>
                 </div>
             </SettingsSection>
 
             <SettingsSection title="Profile Picture">
                 <div className="flex items-center gap-6">
-                    <img src={avatarPreview} alt="Avatar Preview" className="w-24 h-24 rounded-full object-cover bg-gray-700" />
+                    <img src={avatarPreview} alt="Avatar Preview" className="w-24 h-24 rounded-full object-cover bg-gray-200 dark:bg-gray-700" />
                     <form onSubmit={handleAvatarUpdate}>
-                        <label htmlFor="avatar-upload" className={`cursor-pointer font-bold py-2 px-4 rounded-md ${isSubmitting ? 'bg-gray-500' : 'bg-gray-700 hover:bg-gray-600'}`}>Choose Image</label>
+                        <label htmlFor="avatar-upload" className={`cursor-pointer font-bold py-2 px-4 rounded-md ${isSubmitting ? 'bg-gray-400 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>Choose Image</label>
                         <input id="avatar-upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e, setAvatarFile, setAvatarPreview)} className="hidden" disabled={isSubmitting} />
                         {avatarFile && <button type="submit" className="ml-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50" disabled={isSubmitting}>Upload</button>}
                     </form>
                 </div>
             </SettingsSection>
+
+            <SettingsSection title="Cover Image">
+                <form onSubmit={handleCoverImageUpdate}>
+                    {coverImagePreview && <img src={coverImagePreview} alt="Cover Preview" className="w-full aspect-[16/5] rounded-lg object-cover bg-gray-200 dark:bg-gray-700 mb-4" />}
+                    <label htmlFor="cover-upload" className={`cursor-pointer font-bold py-2 px-4 rounded-md ${isSubmitting ? 'bg-gray-400 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>Choose Image</label>
+                    <input id="cover-upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e, setCoverImageFile, setCoverImagePreview)} className="hidden" disabled={isSubmitting} />
+                    {coverImageFile && <button type="submit" className="ml-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50" disabled={isSubmitting}>Upload</button>}
+                </form>
+            </SettingsSection>
             
             <SettingsSection title="Account Details">
                 <form onSubmit={handleProfileUpdate} className="space-y-4">
                     <div>
-                        <label htmlFor="fullName" className="block text-sm font-medium text-gray-400 mb-1">Full Name</label>
-                        <input type="text" id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md" disabled={isSubmitting}/>
+                        <label htmlFor="fullName" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Full Name</label>
+                        <input type="text" id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-2 rounded-md bg-gray-200 dark:bg-gray-700" disabled={isSubmitting}/>
                     </div>
                     <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1">Email Address</label>
-                        <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md" disabled={isSubmitting} />
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Email Address</label>
+                        <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 rounded-md bg-gray-200 dark:bg-gray-700" disabled={isSubmitting} />
                     </div>
                     <div className="text-right pt-2"><button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md disabled:opacity-50" disabled={isSubmitting}>Save Details</button></div>
                 </form>
             </SettingsSection>
 
+            <SettingsSection title="Change Password">
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                    <input type="password" placeholder="Old Password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="w-full p-2 rounded-md bg-gray-200 dark:bg-gray-700" disabled={isSubmitting} />
+                    <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full p-2 rounded-md bg-gray-200 dark:bg-gray-700" disabled={isSubmitting} />
+                    <div className="text-right pt-2"><button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md disabled:opacity-50" disabled={isSubmitting}>Change Password</button></div>
+                </form>
+            </SettingsSection>
+
             <SettingsSection title="Danger Zone" isDangerZone={true}>
-                <p className="text-gray-400 mb-4">Deleting your account is a permanent action and cannot be undone.</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Deleting your account is a permanent action and cannot be undone.</p>
                 <button onClick={() => setShowDeleteModal(true)} className="bg-red-800 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md" disabled={isSubmitting}>Delete My Account</button>
             </SettingsSection>
         </div>

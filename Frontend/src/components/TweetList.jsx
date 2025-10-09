@@ -3,14 +3,14 @@ import React from 'react';
 
 // A small sub-component for displaying a single tweet card
 const TweetCard = ({ tweet }) => (
-    <div className="bg-gray-800 p-4 rounded-lg flex items-start space-x-4">
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg flex items-start space-x-4 border border-gray-200 dark:border-gray-700">
         <img src={tweet.owner?.avatar} alt={tweet.owner?.username} className="w-12 h-12 rounded-full" />
         <div>
             <div className="flex items-center space-x-2">
-                <p className="font-bold text-white">{tweet.owner?.username}</p>
-                <p className="text-xs text-gray-400">{new Date(tweet.createdAt).toLocaleString()}</p>
+                <p className="font-bold text-black dark:text-white">{tweet.owner?.username}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(tweet.createdAt).toLocaleString()}</p>
             </div>
-            <p className="text-gray-300 mt-1">{tweet.content}</p>
+            <p className="text-gray-800 dark:text-gray-300 mt-1">{tweet.content}</p>
         </div>
     </div>
 );
@@ -18,11 +18,11 @@ const TweetCard = ({ tweet }) => (
 
 function TweetList({ tweets, loading }) {
     if (loading) {
-        return <div className="text-center text-white">Loading posts...</div>;
+        return <div className="text-center text-black dark:text-white">Loading posts...</div>;
     }
 
     if (tweets.length === 0) {
-        return <div className="text-center text-gray-400 p-8">This channel hasn't posted anything yet.</div>;
+        return <div className="text-center text-gray-500 dark:text-gray-400 p-8">This channel hasn't posted anything yet.</div>;
     }
 
     return (

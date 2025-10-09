@@ -4,15 +4,19 @@ import { useAuth } from '../Context/AuthContext';
 import { 
     HomeIcon, ExploreIcon, CommunityIcon, MovieIcon, MusicIcon, TechIcon, GamingIcon, 
     SubscriptionsIcon, HistoryIcon, PlaylistIcon, MyVideosIcon, AboutIcon, SettingsIcon 
-} from './Icons'; // Import all icons from your new file
+} from './Icons';
 
-// Reusable NavItem component
+// Reusable NavItem component with theme-aware styles
 const NavItem = ({ to, icon, text, isOpen }) => (
     <NavLink 
         to={to} 
         end={to === "/"}
         className={({ isActive }) => 
-            `flex items-center p-3 my-1 rounded-lg transition-colors duration-200 ${isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`
+            `flex items-center p-3 my-1 rounded-lg transition-colors duration-200 ${
+                isActive 
+                ? 'bg-gray-200 dark:bg-gray-700 text-black dark:text-white' 
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white'
+            }`
         }
         title={text}
     >
@@ -49,7 +53,7 @@ const userLinks = [
 ];
 
 const secondaryLinks = [
-    { to: "/settings", icon: <SettingsIcon />, text: "Settings" }, // Example for a future settings page
+    { to: "/settings", icon: <SettingsIcon />, text: "Settings" },
     { to: "/about", icon: <AboutIcon />, text: "About" },
 ];
 
@@ -65,22 +69,22 @@ function Sidebar({ isOpen }) {
     );
 
     return (
-        <aside className={`transition-all duration-300 ease-in-out bg-[#0F0F0F] border-r border-gray-800 flex-shrink-0 ${isOpen ? 'w-64' : 'w-20'}`}>
-            <div className="p-2 overflow-y-auto h-full scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+        <aside className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isOpen ? 'w-64' : 'w-20'} bg-white dark:bg-[#0F0F0F] border-r border-gray-200 dark:border-gray-800`}>
+            <div className={`p-2 overflow-y-auto h-full scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-gray-100 dark:scrollbar-track-gray-900`}>
                 <nav className="flex flex-col">
                     {renderNavSection(mainLinks)}
                     
-                    <div className={`border-t border-gray-700 my-2 ${!isOpen && 'mx-2'}`}></div>
+                    <div className={`border-t my-2 ${!isOpen && 'mx-2'} border-gray-200 dark:border-gray-700`}></div>
                     {renderNavSection(categoryLinks, "Categories")}
                     
                     {isAuthenticated && (
                         <>
-                            <div className={`border-t border-gray-700 my-2 ${!isOpen && 'mx-2'}`}></div>
+                            <div className={`border-t my-2 ${!isOpen && 'mx-2'} border-gray-200 dark:border-gray-700`}></div>
                             {renderNavSection(userLinks, "You")}
                         </>
                     )}
 
-                    <div className={`border-t border-gray-700 my-2 ${!isOpen && 'mx-2'}`}></div>
+                    <div className={`border-t my-2 ${!isOpen && 'mx-2'} border-gray-200 dark:border-gray-700`}></div>
                     {renderNavSection(secondaryLinks)}
                 </nav>
             </div>

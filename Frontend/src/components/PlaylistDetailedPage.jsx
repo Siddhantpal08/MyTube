@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
-import { useAuth } from '../Context/AuthContext'; // Import useAuth
-import toast from 'react-hot-toast'; // Import toast for notifications
-import VideoCard from './VideoCard';
+import { useAuth } from '../Context/AuthContext';
+import toast from 'react-hot-toast';
+import VideoCard from '../components/VideoCard'; // Corrected path
 
 function PlaylistDetailPage() {
     const { playlistId } = useParams();
-    const { user } = useAuth(); // Get the current logged-in user
+    const { user } = useAuth();
     const [playlist, setPlaylist] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -53,25 +53,30 @@ function PlaylistDetailPage() {
         }
     };
 
-    if (loading) return <div className="text-white text-center p-8">Loading Playlist...</div>;
-    if (error) return <div className="text-red-500 text-center p-8">{error}</div>;
-    if (!playlist) return <div className="text-center text-white p-8">Playlist not found.</div>;
+    if (loading) return <div className="text-center p-8">Loading Playlist...</div>;
+    if (error) return <div className="text-center text-red-500 p-8">{error}</div>;
+    if (!playlist) return <div className="text-center p-8">Playlist not found.</div>;
 
     return (
-        <div className="p-4 md:p-8 text-white">
+        <div className="p-4 md:p-8">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold">{playlist.name}</h1>
-                <p className="text-gray-400 mt-2">{playlist.description}</p>
-                <p className="text-sm text-gray-400 mt-1">
-                    Created by {playlist.owner?.username} • {playlist.totalVideos || 0} videos • {playlist.totalViews || 0} views
-                </p>
+                <p className="text-gray-600 dark:text-gray-400 mt-2">{playlist.description}</p>
+                <div className="flex items-center gap-4 mt-4">
+                    <img src={playlist.owner.avatar} alt={playlist.owner.username} className="w-10 h-10 rounded-full object-cover"/>
+                    <div>
+                        <p className="font-semibold">{playlist.owner?.username}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {playlist.totalVideos || 0} videos • {playlist.totalViews || 0} views
+                        </p>
+                    </div>
+                </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {playlist.videos.length > 0 ? (
                     playlist.videos.map(video => (
                         <div key={video._id} className="relative group">
                             <VideoCard video={video} />
-                            {/* --- NEW: Conditionally render a remove button --- */}
                             {isPlaylistOwner && (
                                 <button
                                     onClick={() => handleRemoveVideo(video._id)}
@@ -84,7 +89,7 @@ function PlaylistDetailPage() {
                         </div>
                     ))
                 ) : (
-                    <p>This playlist has no videos yet.</p>
+                    <p className="text-gray-500 dark:text-gray-400">This playlist has no videos yet.</p>
                 )}
             </div>
         </div>

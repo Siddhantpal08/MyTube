@@ -5,7 +5,8 @@ import SkeletonCard from './SkeletonCard';
 import { useApp } from '../Context/AppContext';
 
 const QuotaBanner = () => (
-    <div className="bg-red-900 border-l-4 border-red-500 text-red-100 p-4 mb-6 rounded-r-lg shadow-lg" role="alert">
+    // This banner now has styles for both light and dark mode
+    <div className="border-l-4 p-4 mb-6 rounded-r-lg shadow-lg bg-red-100 dark:bg-red-900 border-red-500 text-red-800 dark:text-red-100" role="alert">
         <p className="font-bold">API Limit Reached</p>
         <p className="text-sm">The daily YouTube API quota has been exceeded. Public video data will not be available until tomorrow.</p>
     </div>
@@ -40,23 +41,23 @@ function HomePage() {
             {youtubeQuotaExhausted && <QuotaBanner />}
             {error && !youtubeQuotaExhausted && <div className="text-center text-red-500 p-8 text-lg">{error}</div>}
             
-            {/* --- THE FINAL RESPONSIVE GRID (CAPPED AT 4 COLUMNS) --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-10">
                 {videos.map((video, index) => {
                     if (videos.length === index + 1) {
                         return (
-                            <div ref={lastVideoElementRef} key={video.videoId}>
+                            <div ref={lastVideoElementRef} key={video.videoId || video._id}>
                                 <VideoCard video={video} />
                             </div>
                         );
                     } else {
-                        return <VideoCard key={video.videoId} video={video} />;
+                        return <VideoCard key={video.videoId || video._id} video={video} />;
                     }
                 })}
             </div>
 
             {loading && videos.length > 0 && (
-                <div className="text-center text-white py-8 col-span-full">
+                // This text is now theme-aware
+                <div className="text-center py-8 col-span-full text-gray-800 dark:text-white">
                     <p>Loading more...</p>
                 </div>
             )}

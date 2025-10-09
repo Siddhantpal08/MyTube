@@ -69,9 +69,9 @@ function ChannelPage() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-white">Loading channel...</div>;
+    if (loading) return <div className="p-8 text-center">Loading channel...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
-    if (!channel) return <div className="p-8 text-center text-gray-400">Channel not found.</div>;
+    if (!channel) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Channel not found.</div>;
 
     const isOwner = user?._id === channel._id;
     
@@ -82,25 +82,25 @@ function ChannelPage() {
         <div>
             {/* --- Channel Header --- */}
             <div className="w-full">
-                <div className="h-40 md:h-52 bg-gray-700">
+                <div className="h-40 md:h-52 bg-gray-300 dark:bg-gray-700">
                     {secureCoverImage && <img src={secureCoverImage} alt="Cover" className="w-full h-full object-cover" />}
                 </div>
-                <div className="px-4 sm:px-6 lg:px-8 bg-[#121212] py-4">
+                <div className="px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#121212] py-4 shadow-md">
                     <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20">
-                        <img src={secureAvatar} alt={channel.username} className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[#121212]" />
+                        <img src={secureAvatar} alt={channel.username} className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white dark:border-[#121212]" />
                         <div className="ml-4 mt-4 sm:mt-0 flex-1">
-                            <h1 className="text-2xl sm:text-3xl font-bold text-white">{channel.fullName}</h1>
-                            <div className="flex items-center space-x-3 text-sm text-gray-400">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-black dark:text-white">{channel.fullName}</h1>
+                            <div className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400">
                                 <span>@{channel.username}</span>
                                 <span>{formatCompactNumber(subscribersCount)} subscribers</span>
                             </div>
                         </div>
                         {isOwner ? (
-                             <Link to="/account/edit" className="font-bold py-2 px-5 rounded-full bg-gray-600 hover:bg-gray-500 transition-colors">Edit Channel</Link>
+                            <Link to="/settings" className="font-bold py-2 px-5 rounded-full bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">Edit Channel</Link>
                         ) : isAuthenticated && (
                             <button
                                 onClick={handleToggleSubscription}
-                                className={`font-bold py-2 px-5 rounded-full transition-colors duration-200 ${isSubscribed ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600 hover:bg-red-700'}`}
+                                className={`font-bold py-2 px-5 rounded-full transition-colors duration-200 ${isSubscribed ? 'bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500' : 'bg-red-600 hover:bg-red-700 text-white'}`}
                             >
                                 {isSubscribed ? 'Subscribed' : 'Subscribe'}
                             </button>
@@ -110,10 +110,10 @@ function ChannelPage() {
             </div>
 
             {/* --- Channel Navigation Tabs --- */}
-            <div className="border-b border-gray-700 mt-2 px-4 sm:px-6">
+            <div className="border-b border-gray-200 dark:border-gray-700 mt-2 px-4 sm:px-6">
                 <nav className="flex space-x-4">
-                    <NavLink to={`/channel/${username}`} end className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-white border-white' : 'text-gray-400 border-transparent hover:text-white'}`}>Videos</NavLink>
-                    <NavLink to={`/channel/${username}/about`} className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-white border-white' : 'text-gray-400 border-transparent hover:text-white'}`}>About</NavLink>
+                    <NavLink to={`/channel/${username}`} end className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-red-500 border-red-500' : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-black dark:hover:text-white'}`}>Videos</NavLink>
+                    <NavLink to={`/channel/${username}/about`} className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-red-500 border-red-500' : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-black dark:hover:text-white'}`}>About</NavLink>
                 </nav>
             </div>
             
@@ -125,7 +125,7 @@ function ChannelPage() {
                             {videos.map(video => <VideoCard key={video._id} video={video} />)}
                         </div>
                     ) : (
-                        <div className="text-center text-gray-400 py-16">
+                        <div className="text-center text-gray-500 dark:text-gray-400 py-16">
                             <h2 className="text-xl font-semibold">This channel hasn't uploaded any videos.</h2>
                         </div>
                     )}

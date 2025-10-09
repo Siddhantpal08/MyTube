@@ -1,20 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
 import { placeholderAvatar } from '../utils/formatters';
 
-// A reusable input field for the form
+// Reusable Input Field with theme-aware styles
 const InputField = ({ label, name, type, value, onChange }) => (
     <div>
-        <label htmlFor={name} className="block text-sm font-medium text-gray-400 mb-1">{label}</label>
+        <label htmlFor={name} className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</label>
         <input 
             type={type} 
             name={name} 
             id={name}
             value={value} 
             onChange={onChange} 
-            className="w-full bg-gray-900 border border-gray-700 rounded-lg shadow-sm p-2 text-white focus:ring-red-500 focus:border-red-500" 
+            className="w-full p-2 rounded-lg shadow-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-red-500 focus:border-red-500" 
         />
     </div>
 );
@@ -107,60 +108,62 @@ function EditChannelPage() {
         }
     };
 
+    // Show a loading state until the user data is available
+    if (!user) {
+        return <div className="p-4 text-center">Loading...</div>;
+    }
+
     return (
-        <div className="max-w-4xl mx-auto p-4 text-white space-y-8">
+        <div className="max-w-4xl mx-auto p-4 space-y-8">
             <h1 className="text-3xl font-bold">Customize Channel</h1>
 
-            {/* --- Update Details Form --- */}
-            <form onSubmit={handleDetailsUpdate} className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <form onSubmit={handleDetailsUpdate} className="p-6 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                 <h2 className="text-xl font-semibold mb-4">Channel Information</h2>
                 <div className="space-y-4">
                     <InputField label="Full Name" name="fullName" type="text" value={details.fullName} onChange={handleInputChange} />
                     <InputField label="Email" name="email" type="email" value={details.email} onChange={handleInputChange} />
                     <div className="text-right">
-                        <button type="submit" disabled={isUpdatingDetails} className="px-5 py-2 bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold">
+                        <button type="submit" disabled={isUpdatingDetails} className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-semibold">
                             {isUpdatingDetails ? 'Saving...' : 'Save Details'}
                         </button>
                     </div>
                 </div>
             </form>
 
-            {/* --- Update Avatar Section --- */}
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                 <h2 className="text-xl font-semibold mb-4">Channel Avatar</h2>
-                 <div className="flex items-center gap-6">
-                    <img src={avatarPreview} alt="Avatar Preview" className="w-24 h-24 rounded-full object-cover bg-gray-700" />
-                    <div className="flex-1">
-                        <input type="file" name="avatar" id="avatar-upload" onChange={handleFileChange} className="hidden" />
-                        <label htmlFor="avatar-upload" className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">
-                            Choose Image
-                        </label>
-                        {avatar && <span className="ml-3 text-sm text-gray-400">{avatar.name}</span>}
-                    </div>
-                    <button onClick={handleAvatarUpdate} disabled={isUpdatingAvatar || !avatar} className="px-5 py-2 bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold">
-                        {isUpdatingAvatar ? 'Uploading...' : 'Update Avatar'}
-                    </button>
-                 </div>
+            <div className="p-6 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+               <h2 className="text-xl font-semibold mb-4">Channel Avatar</h2>
+               <div className="flex items-center gap-6">
+                  <img src={avatarPreview} alt="Avatar Preview" className="w-24 h-24 rounded-full object-cover bg-gray-200 dark:bg-gray-700" />
+                  <div className="flex-1">
+                     <input type="file" name="avatar" id="avatar-upload" onChange={handleFileChange} className="hidden" />
+                     <label htmlFor="avatar-upload" className="cursor-pointer font-semibold py-2 px-4 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                         Choose Image
+                     </label>
+                     {avatar && <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">{avatar.name}</span>}
+                  </div>
+                  <button onClick={handleAvatarUpdate} disabled={isUpdatingAvatar || !avatar} className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-semibold">
+                      {isUpdatingAvatar ? 'Uploading...' : 'Update Avatar'}
+                  </button>
+               </div>
             </div>
             
-            {/* --- Update Cover Image Section --- */}
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                 <h2 className="text-xl font-semibold mb-4">Channel Cover Image</h2>
-                 <div className="w-full aspect-[16/5] rounded-lg bg-gray-700 mb-4 overflow-hidden">
-                    {coverPreview && <img src={coverPreview} alt="Cover Preview" className="w-full h-full object-cover" />}
-                 </div>
-                 <div className="flex items-center gap-6">
-                    <div className="flex-1">
-                        <input type="file" name="coverImage" id="cover-upload" onChange={handleFileChange} className="hidden" />
-                        <label htmlFor="cover-upload" className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">
-                            Choose Image
-                        </label>
-                        {coverImage && <span className="ml-3 text-sm text-gray-400">{coverImage.name}</span>}
-                    </div>
-                    <button onClick={handleCoverImageUpdate} disabled={isUpdatingCover || !coverImage} className="px-5 py-2 bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold">
-                        {isUpdatingCover ? 'Uploading...' : 'Update Cover'}
-                    </button>
-                 </div>
+            <div className="p-6 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+               <h2 className="text-xl font-semibold mb-4">Channel Cover Image</h2>
+               <div className="w-full aspect-[16/5] rounded-lg bg-gray-200 dark:bg-gray-700 mb-4 overflow-hidden">
+                  {coverPreview && <img src={coverPreview} alt="Cover Preview" className="w-full h-full object-cover" />}
+               </div>
+               <div className="flex items-center gap-6">
+                  <div className="flex-1">
+                     <input type="file" name="coverImage" id="cover-upload" onChange={handleFileChange} className="hidden" />
+                     <label htmlFor="cover-upload" className="cursor-pointer font-semibold py-2 px-4 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                         Choose Image
+                     </label>
+                     {coverImage && <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">{coverImage.name}</span>}
+                  </div>
+                  <button onClick={handleCoverImageUpdate} disabled={isUpdatingCover || !coverImage} className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-semibold">
+                      {isUpdatingCover ? 'Uploading...' : 'Update Cover'}
+                  </button>
+               </div>
             </div>
         </div>
     );

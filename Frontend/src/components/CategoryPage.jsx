@@ -6,7 +6,7 @@ import SkeletonCard from './SkeletonCard';
 import { useApp } from '../Context/AppContext';
 
 const QuotaBanner = () => (
-    <div className="bg-red-900 border-l-4 border-red-500 text-red-100 p-4 mb-6 rounded-r-lg shadow-lg" role="alert">
+    <div className="border-l-4 p-4 mb-6 rounded-r-lg shadow-lg bg-red-100 dark:bg-red-900 border-red-500 text-red-800 dark:text-red-100" role="alert">
         <p className="font-bold">API Limit Reached</p>
         <p className="text-sm">The daily YouTube API quota has been exceeded for this category. Please try again tomorrow.</p>
     </div>
@@ -51,7 +51,7 @@ function CategoryPage() {
     
     return (
         <div className="p-4">
-            <h1 className="text-3xl font-bold text-white mb-6">{categoryName}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">{categoryName}</h1>
             {youtubeQuotaExhausted && <QuotaBanner />}
             {error && <div className="text-center text-red-500 p-8 text-lg">{error}</div>}
             

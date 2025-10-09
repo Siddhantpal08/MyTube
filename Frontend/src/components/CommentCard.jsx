@@ -96,31 +96,24 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
     // --- RENDER ---
     return (
         <>
-            {showDeleteModal && (
-                <ConfirmationModal 
-                    title="Delete Comment"
-                    message="Are you sure you want to permanently delete this comment?"
-                    onConfirm={handleDelete}
-                    onCancel={() => setShowDeleteModal(false)} 
-                />
-            )}
+            {showDeleteModal && ( <ConfirmationModal title="Delete Comment" message="Are you sure?" onConfirm={handleDelete} onCancel={() => setShowDeleteModal(false)} /> )}
+            
             <div className="flex items-start space-x-4">
-                <img src={avatarUrl || placeholderAvatar} alt={comment.owner?.username} className="w-10 h-10 rounded-full object-cover bg-gray-700" />
-                
+                <img src={avatarUrl || placeholderAvatar} alt={comment.owner?.username} className="w-10 h-10 rounded-full object-cover bg-gray-200 dark:bg-gray-700" />
                 <div className="w-full">
                     <div className="flex items-center space-x-2">
-                        <p className="font-bold text-sm text-white">{comment.owner?.username || "User"}</p>
-                        <p className="text-xs text-gray-400 font-normal">{timeSince(comment.createdAt)}</p>
+                        <p className="font-bold text-sm text-gray-900 dark:text-white">{comment.owner?.username || "User"}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-normal">{timeSince(comment.createdAt)}</p>
                     </div>
 
                     {!isEditing ? (
-                        <p className="text-gray-300 mt-1 whitespace-pre-wrap">{comment.content}</p>
+                        <p className="text-gray-800 dark:text-gray-300 mt-1 whitespace-pre-wrap">{comment.content}</p>
                     ) : (
                         <form onSubmit={handleUpdate} className="mt-2">
-                            <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="w-full p-2 bg-gray-600 text-white rounded-md" />
+                            <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="w-full p-2 rounded-md bg-gray-200 dark:bg-gray-600" />
                             <div className="flex gap-2 mt-2">
-                                <button type="submit" className="bg-red-600 text-xs px-3 py-1 rounded">Save</button>
-                                <button type="button" onClick={() => setIsEditing(false)} className="bg-gray-500 text-xs px-3 py-1 rounded">Cancel</button>
+                                <button type="submit" className="bg-red-600 text-white text-xs px-3 py-1 rounded">Save</button>
+                                <button type="button" onClick={() => setIsEditing(false)} className="bg-gray-400 dark:bg-gray-500 text-xs px-3 py-1 rounded">Cancel</button>
                             </div>
                         </form>
                     )}
@@ -129,21 +122,19 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
                         <div className="flex items-center gap-4 mt-2">
                             <div className="flex items-center gap-1">
                                 <button onClick={handleLikeToggle} disabled={comment.isExternal}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-white'}`} viewBox="0 0 20 20" fill="currentColor">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'}`} viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                                     </svg>
                                 </button>
-                                <span className="text-xs text-gray-400">{formatCompactNumber(likesCount)}</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">{formatCompactNumber(likesCount)}</span>
                             </div>
                             
-                            {/* The Edit and Delete buttons are now separate for individual control */}
                             {isOwner && (
                                 <>
-                                    {/* The Edit button will only show if canEdit is true */}
                                     {canEdit && (
-                                        <button onClick={() => setIsEditing(true)} className="text-xs text-gray-400 font-semibold hover:text-white">Edit</button>
+                                        <button onClick={() => setIsEditing(true)} className="text-xs text-gray-500 dark:text-gray-400 font-semibold hover:text-black dark:hover:text-white">Edit</button>
                                     )}
-                                    <button onClick={() => setShowDeleteModal(true)} className="text-xs text-gray-400 font-semibold hover:text-white">Delete</button>
+                                    <button onClick={() => setShowDeleteModal(true)} className="text-xs text-gray-500 dark:text-gray-400 font-semibold hover:text-black dark:hover:text-white">Delete</button>
                                 </>
                             )}
                         </div>

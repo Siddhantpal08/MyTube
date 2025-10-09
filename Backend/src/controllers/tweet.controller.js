@@ -39,23 +39,81 @@ const getTweetsAggregate = (matchStage = {}, userId = null) => {
     ];
 };
 
-// --- CONTROLLERS ---
-
+// --- PUBLIC FEED (FOR GUESTS & LOGGED-IN USERS) ---
 const getAllTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
-    // Use the aggregation pipeline for the public feed
-    const tweetsAggregate = Tweet.aggregate(getTweetsAggregate({}, req.user?._id));
+    const userId = req.user?._id;
+
+    const pipeline = [
+        {
+            $lookup: { // Join with likes
+                from: "likes",
+                localField: "_id",
+                foreignField: "tweet",
+                as: "likes"
+            }
+        },
+        {
+            $lookup: { // Join with users to get the owner's details
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }]
+            }
+        },
+        {
+            $addFields: {
+                likesCount: { $size: "$likes" },
+                owner: { $first: "$owner" },
+                isLiked: userId ? { $in: [new mongoose.Types.ObjectId(userId), "$likes.likedBy"] } : false
+            }
+        },
+        { $project: { likes: 0 } },
+        { $sort: { createdAt: -1 } }
+    ];
+
+    const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
+
+    if (!result) {
+        throw new ApiError(500, "Could not retrieve tweets");
+    }
     return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
+// --- PERSONALIZED FEED (FOR LOGGED-IN USERS) ---
 const getSubscribedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
     const channelIds = subscriptions.map(sub => sub.channel);
-    
-    // Use the aggregation pipeline with a filter for subscribed channels
-    const tweetsAggregate = Tweet.aggregate(getTweetsAggregate({ $match: { owner: { $in: channelIds } } }, req.user._id));
+
+    const pipeline = [
+        { $match: { owner: { $in: channelIds } } },
+        {
+            $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }]
+            }
+        },
+        {
+            $addFields: {
+                likesCount: { $size: "$likes" },
+                owner: { $first: "$owner" },
+                isLiked: { $in: [req.user._id, "$likes.likedBy"] }
+            }
+        },
+        { $project: { likes: 0 } },
+        { $sort: { createdAt: -1 } }
+    ];
+
+    const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
     return res.status(200).json(new ApiResponse(200, result, "Subscribed feed fetched successfully"));
 });

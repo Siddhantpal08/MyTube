@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import { timeSince, placeholderAvatar, formatCompactNumber } from '../utils/formatters';
@@ -12,22 +12,31 @@ const canEdit = (createdAt) => {
 
 const TweetCard = ({ tweet, onDelete }) => {
     const { user, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
     const isOwner = user?._id === tweet.owner?._id;
 
     const [isLiked, setIsLiked] = useState(tweet.isLiked);
     const [likesCount, setLikesCount] = useState(tweet.likesCount);
 
     const handleLike = async () => {
-        if (!isAuthenticated) return toast.error("Please log in to like posts.");
+        if (!isAuthenticated) {
+            toast.error("Please log in to like posts.");
+            navigate('/login', { state: { from: location } });
+            return;
+        }
         
+        // Optimistic update
+        const originalState = isLiked;
         setIsLiked(prev => !prev);
-        setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+        setLikesCount(prev => originalState ? prev - 1 : prev + 1);
 
         try {
             await axiosClient.post(`/likes/toggle/t/${tweet._id}`);
         } catch (error) {
-            setIsLiked(prev => !prev);
-            setLikesCount(prev => isLiked ? prev + 1 : prev - 1);
+            // Revert on failure
+            setIsLiked(originalState);
+            setLikesCount(prev => originalState ? prev + 1 : prev - 1);
             toast.error("Failed to update like status.");
         }
     };
@@ -62,13 +71,18 @@ const TweetCard = ({ tweet, onDelete }) => {
                     )}
                 </div>
 
-                {/* --- THE FINAL ICON FIX --- */}
-                <div className="mt-3 flex items-center">
-                    <button onClick={handleLike} className={`flex items-center space-x-2 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 015.13-1.637l.852.341.852-.341a4.5 4.5 0 015.13 1.637l2.877 4.801a4.5 4.5 0 01-1.638 5.13l-4.8 2.877a4.5 4.5 0 01-5.13-1.637l-.852-.341-.852.341a4.5 4.5 0 01-5.13-1.637l-2.877-4.8a4.5 4.5 0 011.638-5.132l4.8-2.877z" />
+                {/* --- UPDATED LIKE BUTTON --- */}
+                <div className="mt-3 flex items-center space-x-6">
+                    <button className="flex items-center gap-2 text-gray-400 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+                        <span className="text-xs">Reply</span>
+                    </button>
+                    <button onClick={handleLike} className="flex items-center gap-2">
+                        {/* This SVG is now a heart, matching your comments section */}
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-white'}`} viewBox="0 0 20 20" fill="currentColor">
+                           <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                         </svg>
-                        <span className="font-semibold text-sm">{formatCompactNumber(likesCount)}</span>
+                        <span className={`text-xs font-semibold ${isLiked ? 'text-red-500' : 'text-gray-400'}`}>{formatCompactNumber(likesCount)}</span>
                     </button>
                 </div>
             </div>

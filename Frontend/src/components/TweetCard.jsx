@@ -18,9 +18,7 @@ const TweetCard = ({ tweet, onDelete }) => {
     const [likesCount, setLikesCount] = useState(tweet.likesCount);
 
     const handleLike = async () => {
-        if (!isAuthenticated) {
-            return toast.error("Please log in to like posts.");
-        }
+        if (!isAuthenticated) return toast.error("Please log in to like posts.");
         
         setIsLiked(prev => !prev);
         setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
@@ -39,9 +37,9 @@ const TweetCard = ({ tweet, onDelete }) => {
             <Link to={`/channel/${tweet.owner?.username}`}>
                 <img src={tweet.owner?.avatar || placeholderAvatar} alt={tweet.owner?.username} className="w-12 h-12 rounded-full object-cover" />
             </Link>
-            <div className="flex-1 min-w-0"> {/* Added min-w-0 to prevent overflow */}
+            <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start">
-                    <div className="flex-1">
+                    <div>
                         <div className="flex items-center flex-wrap space-x-2">
                             <Link to={`/channel/${tweet.owner?.username}`} className="font-bold text-white hover:underline truncate">{tweet.owner?.fullName}</Link>
                             <span className="text-gray-400 text-sm truncate">@{tweet.owner?.username}</span>
@@ -67,8 +65,8 @@ const TweetCard = ({ tweet, onDelete }) => {
                 {/* --- THE FINAL ICON FIX --- */}
                 <div className="mt-3 flex items-center">
                     <button onClick={handleLike} className={`flex items-center space-x-2 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 015.13-1.637l.852.341.852-.341a4.5 4.5 0 015.13 1.637l2.877 4.801a4.5 4.5 0 01-1.638 5.13l-4.8 2.877a4.5 4.5 0 01-5.13-1.637l-.852-.341-.852.341a4.5 4.5 0 01-5.13-1.637l-2.877-4.8a4.5 4.5 0 011.638-5.132l4.8-2.877z" />
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 015.13-1.637l.852.341.852-.341a4.5 4.5 0 015.13 1.637l2.877 4.801a4.5 4.5 0 01-1.638 5.13l-4.8 2.877a4.5 4.5 0 01-5.13-1.637l-.852-.341-.852.341a4.5 4.5 0 01-5.13-1.637l-2.877-4.8a4.5 4.5 0 011.638-5.132l4.8-2.877z" />
                         </svg>
                         <span className="font-semibold text-sm">{formatCompactNumber(likesCount)}</span>
                     </button>

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
     createTweet,
-    getUserTweets,
+    getTweetById,
     updateTweet,
     deleteTweet,
     getAllTweets,
@@ -21,7 +21,7 @@ router.use(verifyJWT);
 // --- PROTECTED ROUTES ---
 router.route("/").post(createTweet);
 router.route("/feed").get(getSubscribedTweets);
-router.route("/user/:userId").get(getUserTweets);
+router.route("/user/:userId").get(getTweetById);
 router.route("/:tweetId").patch(updateTweet).delete(deleteTweet);
 
 export default router;

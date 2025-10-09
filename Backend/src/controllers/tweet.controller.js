@@ -6,23 +6,30 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Subscription } from "../models/subscription.model.js";
 
-// A reusable pipeline for fetching tweets with all necessary data
 const getTweetsAggregatePipeline = (matchStage = {}, userId = null) => {
+    // Convert userId to ObjectId if it exists, otherwise it's null
+    const loggedInUserId = userId ? new mongoose.Types.ObjectId(userId) : null;
+
     const pipeline = [
         matchStage,
         { $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" } },
         { $lookup: { from: "users", localField: "owner", foreignField: "_id", as: "owner", pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }] } },
-        // --- NEW: Lookup replies (other tweets that reference this one) ---
         { $lookup: { from: "tweets", localField: "_id", foreignField: "parentTweet", as: "replies" } },
         {
             $addFields: {
                 likesCount: { $size: "$likes" },
-                replyCount: { $size: "$replies" }, // Add reply count
+                replyCount: { $size: "$replies" },
                 owner: { $first: "$owner" },
-                isLiked: userId ? { $in: [new mongoose.Types.ObjectId(userId), "$likes.likedBy"] } : false
+                isLiked: {
+                    $cond: {
+                        if: { $eq: [loggedInUserId, null] }, // If no logged-in user
+                        then: false, // Then isLiked is always false
+                        else: { $in: [loggedInUserId, "$likes.likedBy"] } // Otherwise, check if their ID is in the likes array
+                    }
+                }
             }
         },
-        { $project: { likes: 0, replies: 0 } }, // Don't send the full arrays
+        { $project: { likes: 0, replies: 0 } },
         { $sort: { createdAt: -1 } }
     ];
     return pipeline;

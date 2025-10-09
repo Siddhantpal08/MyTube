@@ -31,35 +31,43 @@ const createPlaylist = asyncHandler(async (req, res) => {
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-    const { videoId } = req.query; // NEW: Get videoId from query params
 
     if (!isValidObjectId(userId)) {
         throw new ApiError(400, "Invalid User ID");
     }
 
-    const pipeline = [
-        // Stage 1: Match all playlists owned by the user
-        { $match: { owner: new mongoose.Types.ObjectId(userId) } }
-    ];
-
-    // If a videoId is provided, add a field to check if it's in the playlist
-    if (isValidObjectId(videoId)) {
-        pipeline.push({
+    const playlists = await Playlist.aggregate([
+        {
+            // Stage 1: Match all playlists owned by the user
+            $match: {
+                owner: new mongoose.Types.ObjectId(userId)
+            }
+        },
+        {
+            // Stage 2: Add a new field 'totalVideos' by counting the size of the 'videos' array
             $addFields: {
-                containsCurrentVideo: {
-                    $in: [new mongoose.Types.ObjectId(videoId), "$videos"]
+                totalVideos: {
+                    $size: "$videos"
                 }
             }
-        });
-    }
-
-    const playlists = await Playlist.aggregate(pipeline);
+        },
+        {
+            // Stage 3: Project the fields you want to return to the frontend
+            $project: {
+                _id: 1,
+                name: 1,
+                description: 1,
+                totalVideos: 1,
+                createdAt: 1,
+                updatedAt: 1
+            }
+        }
+    ]);
 
     return res
         .status(200)
         .json(new ApiResponse(200, playlists, "User playlists fetched successfully"));
 });
-
 const getPlaylistById = asyncHandler(async (req, res) => {
     const { playlistId } = req.params;
 

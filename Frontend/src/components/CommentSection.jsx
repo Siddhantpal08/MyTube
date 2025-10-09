@@ -4,6 +4,7 @@ import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
 import { formatCompactNumber, placeholderAvatar, timeSince } from '../utils/formatters';
 import ConfirmationModal from './ConfirmationModel'; // Assuming you have this component
+import CommentCard from './CommentCard';
 
 // --- A single, smart CommentCard component ---
 const CommentCard = ({ comment, onCommentDeleted, onCommentUpdated }) => {
@@ -176,6 +177,7 @@ function CommentsSection({ videoId }) {
             {error && <p className="text-red-500 text-center p-4">{error}</p>}
 
             <div className="space-y-6">
+                {/* This .map() function will now correctly render your CommentCard components */}
                 {comments.map(c => <CommentCard key={c._id} comment={c} onCommentDeleted={onCommentDeleted} onCommentUpdated={onCommentUpdated} />)}
             </div>
 

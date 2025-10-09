@@ -16,7 +16,6 @@ import SubscriptionsPage from './components/SubscriptionsPage.jsx';
 import HistoryPage from './components/HistoryPage.jsx';
 import PlaylistPage from './components/PlaylistPage.jsx';
 import PlaylistDetailPage from './components/PlaylistDetailedPage.jsx';
-import MyVideosPage from './components/MyVideosPage.jsx';
 import UploadVideoPage from './components/UploadVideoPage.jsx';
 import CreatorDashboard from './components/CreatorDashboard.jsx';
 import CommunityPage from './components/CommunityPage.jsx';
@@ -73,10 +72,6 @@ const router = createBrowserRouter([
             {
                 path: 'playlist/:playlistId',
                 element: <ProtectedRoute><PlaylistDetailPage /></ProtectedRoute>
-            },
-            {
-                path: 'my-videos',
-                element: <ProtectedRoute><MyVideosPage /></ProtectedRoute>
             },
             {
                 path: 'upload-video',

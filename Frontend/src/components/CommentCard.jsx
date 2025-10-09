@@ -5,16 +5,9 @@ import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
 import { placeholderAvatar, timeSince } from '../utils/formatters';
-import ConfirmationModal from './ConfirmationModel'; // Make sure you have this component
+import ConfirmationModal from './ConfirmationModel';
 
 function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
-
-    console.log("Comment Owner Data:", comment.owner);
-
-    const avatarUrl = typeof comment.owner?.avatar === 'string' 
-        ? comment.owner.avatar 
-        : comment.owner?.avatar?.url;
-
     const { user } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(comment.content);
@@ -24,7 +17,6 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
 
     const handleDelete = async () => {
         try {
-            // Use the correct API route for deleting a comment
             await axiosClient.delete(`/comments/c/${comment._id}`);
             toast.success("Comment deleted");
             onCommentDeleted(comment._id);
@@ -38,7 +30,6 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
-            // Use the correct API route for updating a comment
             const response = await axiosClient.patch(`/comments/c/${comment._id}`, { content: editedContent });
             onCommentUpdated(response.data.data);
             setIsEditing(false);
@@ -47,6 +38,17 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
             toast.error("Failed to update comment.");
         }
     };
+
+    // 👇 --- THIS IS THE FINAL FIX --- 👇
+    // 1. Determine the correct avatar URL source
+    let avatarUrl = typeof comment.owner?.avatar === 'string' 
+        ? comment.owner.avatar 
+        : comment.owner?.avatar?.url;
+
+    // 2. Ensure the URL is secure to prevent browser blocking
+    if (avatarUrl && avatarUrl.startsWith('http://')) {
+        avatarUrl = avatarUrl.replace('http://', 'https://');
+    }
 
     return (
         <>
@@ -59,8 +61,9 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
                 />
             }
             <div className="flex items-start space-x-4">
-                {/* 👇 FIX: Access the nested .url property for the avatar */}
-                <img src={comment.owner?.avatar?.url || placeholderAvatar} alt={comment.owner?.username} className="w-10 h-10 rounded-full object-cover bg-gray-700" />
+                {/* 3. Use the final, corrected avatarUrl */}
+                <img src={avatarUrl || placeholderAvatar} alt={comment.owner?.username} className="w-10 h-10 rounded-full object-cover bg-gray-700" />
+                
                 <div className="w-full">
                     <div className="flex items-center space-x-2">
                         <p className="font-bold text-sm text-white">{comment.owner?.username}</p>

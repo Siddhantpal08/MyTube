@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Context/AuthContext';
+import { useTheme } from '../Context/ThemeContext';
 import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
 import { placeholderAvatar } from '../utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from '../components/ConfirmationModel';
-import { useTheme } from '../Context/ThemeContext';
 
+// Reusable component for each settings section card
 const SettingsSection = ({ title, children, isDangerZone = false }) => (
     <div className={`p-6 rounded-lg mb-8 ${isDangerZone ? 'bg-red-900/20 border border-red-500/30' : 'bg-gray-800'}`}>
         <h2 className={`text-xl font-semibold mb-6 border-b pb-3 ${isDangerZone ? 'text-red-400 border-red-500/30' : 'border-gray-700'}`}>{title}</h2>
@@ -15,19 +16,23 @@ const SettingsSection = ({ title, children, isDangerZone = false }) => (
 );
 
 function SettingsPage() {
+    // --- HOOKS ---
     const { user, setUser, isAuthenticated, logout, loading: authLoading } = useAuth();
-    const { theme, setTheme } = useTheme(); // 👈 2. Use the global theme context
+    const { theme, setTheme } = useTheme(); // Use the global theme context
     const navigate = useNavigate();
     
-    // State for forms & UI
+    // --- STATE MANAGEMENT ---
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [avatarFile, setAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState('');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // (Add other states like cover image or password here if you expand the page)
 
-    // Redirect guest users
+    // --- EFFECTS ---
+
+    // Effect to redirect guest users
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
             toast.error("You must be logged in to view settings.");
@@ -35,7 +40,7 @@ function SettingsPage() {
         }
     }, [authLoading, isAuthenticated, navigate]);
 
-    // Populate forms with user data
+    // Effect to populate forms with user data when the component loads
     useEffect(() => {
         if (user) {
             setFullName(user.fullName || '');
@@ -44,11 +49,7 @@ function SettingsPage() {
         }
     }, [user]);
     
-    // Theme effect
-    useEffect(() => {
-        document.documentElement.classList.toggle('dark', theme === 'dark');
-        localStorage.setItem('theme', theme);
-    }, [theme]);
+    // --- HANDLER FUNCTIONS ---
 
     const handleFileChange = (e, setFile, setPreview) => {
         const file = e.target.files[0];
@@ -68,9 +69,9 @@ function SettingsPage() {
         const toastId = toast.loading("Uploading avatar...");
         try {
             const response = await axiosClient.patch('/users/avatar', formData);
-            setUser(response.data.data);
+            setUser(response.data.data); // Update global user state
             toast.success("Avatar updated!", { id: toastId });
-            setAvatarFile(null);
+            setAvatarFile(null); // Clear the file input
         } catch (error) {
             toast.error(error.response?.data?.message || "Upload failed.", { id: toastId });
         } finally {
@@ -99,12 +100,12 @@ function SettingsPage() {
         try {
             await axiosClient.delete('/users');
             toast.success("Account deleted successfully.", { id: toastId });
-            logout();
-            navigate('/');
+            logout(); // Log out the user from the frontend
+            navigate('/'); // Redirect to the homepage
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to delete account.", { id: toastId });
+            setIsSubmitting(false); // Only reset submitting state on failure
         } finally {
-            setIsSubmitting(false);
             setShowDeleteModal(false);
         }
     };
@@ -115,7 +116,15 @@ function SettingsPage() {
 
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-8 text-white">
-            {showDeleteModal && ( <ConfirmationModal title="Delete Account" message="Are you sure? This action is permanent and all your data will be lost." onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} /> )}
+            {showDeleteModal && ( 
+                <ConfirmationModal 
+                    title="Delete Account" 
+                    message="Are you sure? This action is permanent and all your data will be lost." 
+                    onConfirm={handleDeleteAccount} 
+                    onCancel={() => setShowDeleteModal(false)} 
+                /> 
+            )}
+
             <h1 className="text-3xl font-bold mb-8">Settings</h1>
 
             <SettingsSection title="Appearance">
@@ -124,7 +133,6 @@ function SettingsPage() {
                     <button onClick={() => setTheme('dark')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'dark' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Dark</button>
                     <button onClick={() => setTheme('light')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'light' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Light</button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">*Note: For a site-wide theme, this logic should be moved to a global ThemeContext.</p>
             </SettingsSection>
 
             <SettingsSection title="Profile Picture">

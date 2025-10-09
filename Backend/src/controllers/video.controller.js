@@ -114,33 +114,78 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid video ID");
     }
 
-    const video = await Video.findOneAndUpdate(
-        {
-            _id: videoId,
-            isPublished: true // Ensure the video is published
-        },
-        { $inc: { views: 1 } },
-        { new: true }
-    )//.populate("owner", "username fullName avatar");
+    // First, we find the video and increment its view count.
+    // This also ensures the video exists and is published before we do more work.
+    const videoExists = await Video.findOneAndUpdate(
+        { _id: videoId, isPublished: true },
+        { $inc: { views: 1 } }
+    );
 
-    if (!video) {
-        throw new ApiError(404, "Video not found");
+    if (!videoExists) {
+        throw new ApiError(404, "Video not found or is not published");
     }
 
+    // Now, run a robust aggregation pipeline to get the video and safely join the owner details.
+    const video = await Video.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1,
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                // This safely gets the first element from the ownerDetails array.
+                // If the owner was not found, the array will be empty, and this will result in `owner: null`.
+                owner: { $first: "$ownerDetails" }
+            }
+        },
+        {
+            $project: {
+                ownerDetails: 0 // Clean up the temporary field
+            }
+        }
+    ]);
+    
+    if (!video.length) {
+        throw new ApiError(404, "Video not found after aggregation");
+    }
+
+    // Add to watch history for the logged-in user
     if (req.user) {
         await User.findByIdAndUpdate(req.user._id, {
             $addToSet: { watchHistory: videoId },
         });
     }
+    
+    const finalVideo = video[0];
 
     // Secure URLs before sending
-    video.thumbnail = secureUrl(video.thumbnail);
-    video.videofile = secureUrl(video.videofile);
-    if (video.owner) {
-        video.owner.avatar = secureUrl(video.owner.avatar);
+    finalVideo.thumbnail = secureUrl(finalVideo.thumbnail);
+    finalVideo.videofile = secureUrl(finalVideo.videofile);
+    if (finalVideo.owner) {
+        finalVideo.owner.avatar = secureUrl(finalVideo.owner.avatar);
     }
 
-    return res.status(200).json(new ApiResponse(200, video, "Video fetched successfully"));
+    return res
+        .status(200)
+        .json(new ApiResponse(200, finalVideo, "Video fetched successfully"));
 });
 
 const updateVideo = asyncHandler(async (req, res) => {

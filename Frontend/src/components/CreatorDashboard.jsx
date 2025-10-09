@@ -4,29 +4,52 @@ import axiosClient from '../Api/axiosClient';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AnalyticsDashboard from '../components/AnalyticsDashboard'; 
-// Assuming the ConfirmationModal component is available
-import ConfirmationModal from '../components/ConfirmationModal'; 
+
+// --- Confirmation Modal Component (Inline for Simplicity) ---
+// Note: In a real app, this should be in '../components/ConfirmationModal.jsx'
+const ConfirmationModal = ({ title, message, onConfirm, onCancel }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
+        <div className="p-6 rounded-lg shadow-2xl w-full max-w-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
+            <p className="text-gray-600 dark:text-gray-400 mt-3">{message}</p>
+            <div className="flex justify-end space-x-4 mt-6">
+                <button 
+                    onClick={onCancel} 
+                    className="px-4 py-2 rounded font-semibold text-gray-800 dark:text-white bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors"
+                >
+                    Cancel
+                </button>
+                <button 
+                    onClick={onConfirm} 
+                    className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors"
+                >
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+);
 
 // --- MyContent Sub-Component (Handles Table Display and Actions) ---
 const MyContent = ({ videos, onEdit, onDelete }) => (
-    <div className="rounded-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl">
-        <table className="min-w-full">
+    <div className="rounded-lg overflow-x-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                    <th className="py-3 px-4 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Video</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 min-w-[250px]">Video</th>
                     <th className="py-3 px-4 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Views</th>
                     <th className="py-3 px-4 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Created</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Actions</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 min-w-[150px]">Actions</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {videos.length > 0 ? (
                     videos.map((video) => (
-                        <tr key={video._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                            <td className="py-3 px-4 flex items-center">
+                        <tr key={video._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td className="py-3 px-4 whitespace-nowrap">
                                 <Link to={`/watch/${video._id}`} className="flex items-center group">
-                                    <img src={video.thumbnail} alt={video.title} className="w-24 h-14 object-cover rounded-md mr-4" />
-                                    <span className="font-medium text-gray-900 dark:text-white group-hover:text-red-500">{video.title}</span>
+                                    <img src={video.thumbnail} alt={video.title} className="w-24 h-14 object-cover rounded-md flex-shrink-0 mr-4" />
+                                    <span className="font-medium text-gray-900 dark:text-white group-hover:text-red-500 line-clamp-2">{video.title}</span>
                                 </Link>
                             </td>
                             <td className="py-3 px-4 text-gray-800 dark:text-gray-300">{video.views}</td>
@@ -129,13 +152,14 @@ function CreatorDashboard() {
         }
     };
 
-    // Handles navigation to the Edit Video page (Fix for button not working)
+    // Handles navigation to the Edit Video page
     const handleEditVideo = (videoId) => {
-        navigate(`/edit-video/${videoId}`); // This should work now that window.confirm is gone.
+        navigate(`/edit-video/${videoId}`);
     };
     
     // --- Render Logic ---
 
+    if (!user) return <div className="text-center p-8 text-xl text-red-500">Please log in to access the Creator Dashboard.</div>;
     if (loading) return <div className="text-center p-8 text-lg font-medium text-gray-700 dark:text-gray-300">Loading your content...</div>;
     if (error) return <div className="text-center text-red-500 p-8 bg-red-100 rounded-lg max-w-lg mx-auto mt-6">{error}</div>;
 
@@ -179,10 +203,9 @@ function CreatorDashboard() {
                     <MyContent 
                         videos={myVideos} 
                         onEdit={handleEditVideo} 
-                        onDelete={confirmDelete} // Use confirmDelete here
+                        onDelete={confirmDelete} 
                     />
                 )}
-                {/* AnalyticsDashboard should be correctly imported */}
                 {activeTab === 'analytics' && <AnalyticsDashboard />}
             </div>
         </div>

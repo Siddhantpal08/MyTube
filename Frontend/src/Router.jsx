@@ -23,12 +23,13 @@ import AddTweetPage from './components/AddTweetPage.jsx';
 import ChannelPage from './components/ChannelPage.jsx';
 import ChannelSearchPage from './components/ChannelSearchPage.jsx';
 import CategoryPage from './components/CategoryPage.jsx';
-import EditChannelPage from './components/EditChannelPage.jsx'; // This should be for your main account settings
+import EditChannelPage from './components/EditChannelPage.jsx';
 import EditTweetPage from './components/EditTweetPage.jsx';
+import EditVideoPage from './components/EditVideoPage.jsx'; // <-- New Import
 import AboutPage from './components/AboutPage.jsx';
 import SettingsPage from './components/SettingsPage.jsx';
+
 // A simple fallback component to display when an error occurs during rendering.
-// This prevents the application from crashing with a blank white screen.
 const ErrorPage = () => (
     <div className="flex items-center justify-center min-h-screen bg-[#0F0F0F] text-white">
         <div className="text-center">
@@ -55,6 +56,8 @@ const router = createBrowserRouter([
             { path: 'community', element: <CommunityPage /> }, // Community feed is public
             { path: 'channel/:username', element: <ChannelPage /> },
             { path: 'search-channels', element: <ChannelSearchPage /> },
+            { path: 'category/:categoryName', element: <CategoryPage /> },
+            { path: 'about', element: <AboutPage /> },
 
             // --- Protected Routes (Require Login) ---
             {
@@ -78,23 +81,21 @@ const router = createBrowserRouter([
                 element: <ProtectedRoute><UploadVideoPage /></ProtectedRoute>
             },
             {
-                path: 'creator/dashboard',
+                // Renamed to 'dashboard' for cleaner URL
+                path: 'dashboard', 
                 element: <ProtectedRoute><CreatorDashboard /></ProtectedRoute>
             },
             {
                 path: 'add-tweet',
                 element: <ProtectedRoute><AddTweetPage /></ProtectedRoute>
             },
-            { 
-                path: 'category/:categoryName', 
-                element: <CategoryPage /> 
+            {
+                // New route for editing video metadata
+                path: 'edit-video/:videoId',
+                element: <ProtectedRoute><EditVideoPage /></ProtectedRoute> // <-- New Protected Route
             },
             { 
-                path: 'about',
-                element: <AboutPage /> 
-            },
-            { 
-                path: 'channel/:username/about', // New route for the channel's about tab
+                path: 'channel/:username/about', // Route for the channel's about tab
                 element: <ChannelPage /> 
             },
             { 
@@ -109,7 +110,6 @@ const router = createBrowserRouter([
                 path: 'settings',
                 element: <ProtectedRoute><SettingsPage /></ProtectedRoute>
             },
-
         ],
     },
 ]);

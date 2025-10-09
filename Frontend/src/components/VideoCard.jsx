@@ -37,7 +37,7 @@ function VideoCard({ video }) {
             <Link to={videoLink}>
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800">
                     <img 
-                        src={video.thumbnail} 
+                        src={video.thumbnail?.url}
                         alt={video.title} 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
                     />
@@ -55,7 +55,7 @@ function VideoCard({ video }) {
                     {/* 1. This DIV is the circular frame. It cannot be distorted. */}
                     <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-600">
                         <img 
-                            src={video.owner?.avatar || placeholderAvatar} 
+                            src={video.owner?.avatar?.url || placeholderAvatar} 
                             alt={channelName}
                             // 2. This IMG fills the frame.
                             className="w-full h-full object-cover" 

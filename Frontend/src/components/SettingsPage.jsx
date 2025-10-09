@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { placeholderAvatar } from '../utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from '../components/ConfirmationModel';
+import { useTheme } from '../Context/ThemeContext';
 
 const SettingsSection = ({ title, children, isDangerZone = false }) => (
     <div className={`p-6 rounded-lg mb-8 ${isDangerZone ? 'bg-red-900/20 border border-red-500/30' : 'bg-gray-800'}`}>
@@ -15,6 +16,7 @@ const SettingsSection = ({ title, children, isDangerZone = false }) => (
 
 function SettingsPage() {
     const { user, setUser, isAuthenticated, logout, loading: authLoading } = useAuth();
+    const { theme, setTheme } = useTheme(); // 👈 2. Use the global theme context
     const navigate = useNavigate();
     
     // State for forms & UI
@@ -122,8 +124,8 @@ function SettingsPage() {
             <SettingsSection title="Appearance">
                 <div className="flex items-center gap-4">
                     <p className="text-gray-400">Theme:</p>
-                    <button onClick={() => setTheme('dark')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'dark' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Dark</button>
-                    <button onClick={() => setTheme('light')} disabled={isSubmitting} className={`font-semibold py-2 px-4 rounded-md ${theme === 'light' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Light</button>
+                    <button onClick={() => setTheme('dark')} className={`font-semibold py-2 px-4 rounded-md ${theme === 'dark' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Dark</button>
+                    <button onClick={() => setTheme('light')} className={`font-semibold py-2 px-4 rounded-md ${theme === 'light' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Light</button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">*Note: For a site-wide theme, this logic should be moved to a global ThemeContext.</p>
             </SettingsSection>

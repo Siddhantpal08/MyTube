@@ -5,47 +5,96 @@ import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
 import myTubeLogo from '/mytube-logo.png';
 
+// --- Reusable Input Field Component ---
+// Now includes an 'error' prop to display validation messages
+const InputField = ({ label, name, type, value, onChange, autoComplete, error }) => (
+    <div>
+        <label htmlFor={name} className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">
+            {label}
+        </label>
+        <input
+            id={name}
+            name={name}
+            type={type}
+            value={value}
+            onChange={onChange}
+            autoComplete={autoComplete}
+            required
+            className={`w-full px-4 py-2 rounded-lg border transition-colors duration-200 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-red-500'}`}
+        />
+        {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    </div>
+);
+
+
+// --- Main Login Page Component ---
 function LoginPage() {
     const navigate = useNavigate();
-    const location = useLocation(); // 1. Get the location object to access state
+    const location = useLocation();
     const { login } = useAuth();
 
-    const [formData, setFormData] = useState({ email: '', password: '' });
+    const [formData, setFormData] = useState({
+        emailOrUsername: '',
+        password: ''
+    });
+    const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [serverError, setServerError] = useState('');
 
-    // 2. Determine where to redirect after a successful login
+    // Determine where to redirect after a successful login
     // If the user was sent here from a protected route, 'from.pathname' will exist.
-    // Otherwise, we default to the homepage '/'.
     const from = location.state?.from?.pathname || "/";
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+        // Clear validation error on change
+        if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: null }));
+        }
+    };
+
+    // --- Client-Side Validation Logic ---
+    const validateForm = () => {
+        const newErrors = {};
+        if (!formData.emailOrUsername.trim()) {
+            newErrors.emailOrUsername = "Email or Username is required.";
+        }
+        if (!formData.password) {
+            newErrors.password = "Password is required.";
+        } else if (formData.password.length < 6) {
+            newErrors.password = "Password must be at least 6 characters long.";
+        }
+        return newErrors;
     };
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setServerError(''); // Reset server error on new submission
+
+        const formErrors = validateForm();
+        if (Object.keys(formErrors).length > 0) {
+            setErrors(formErrors);
+            return;
+        }
+
         setLoading(true);
-        setError('');
         const toastId = toast.loading("Logging in...");
 
         try {
-            const response = await axiosClient.post('/users/login', {
-                email: formData.email,
-                password: formData.password
-            });
+            const response = await axiosClient.post('/users/login', formData);
 
             const { user, accessToken } = response.data.data;
-            login(user, accessToken);
+            login(user, accessToken); // Update auth context
+
             toast.success(`Welcome back, ${user.username}!`, { id: toastId });
             
-            // 3. Navigate to the original destination or the homepage
+            // Navigate to the original destination or the homepage
             navigate(from, { replace: true });
 
         } catch (err) {
             const errorMessage = err.response?.data?.message || "Login failed. Please check your credentials.";
-            setError(errorMessage);
+            setServerError(errorMessage);
             toast.error(errorMessage, { id: toastId });
         } finally {
             setLoading(false);
@@ -53,8 +102,9 @@ function LoginPage() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0F0F0F] p-4">
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0F0F0F] p-4 transition-colors duration-200">
             <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-[#1A1A1A] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800">
+                
                 <div className="text-center">
                     <img src={myTubeLogo} alt="MyTube Logo" className="w-12 h-12 mx-auto mb-2" />
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome Back</h1>
@@ -62,7 +112,34 @@ function LoginPage() {
                 </div>
                 
                 <form onSubmit={handleLogin} className="space-y-4">
-                    {/* ... (your InputField components) ... */}
+                    <InputField
+                        label="Email or Username"
+                        name="emailOrUsername"
+                        type="text"
+                        value={formData.emailOrUsername}
+                        onChange={handleChange}
+                        autoComplete="username"
+                        error={errors.emailOrUsername}
+                    />
+                    <InputField
+                        label="Password"
+                        name="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        autoComplete="current-password"
+                        error={errors.password}
+                    />
+
+                    {serverError && <p className="text-sm text-center text-red-500 dark:text-red-400">{serverError}</p>}
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full py-3 font-bold text-lg text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-900 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        {loading ? 'Signing In...' : 'Sign In'}
+                    </button>
                 </form>
 
                 <div className="text-center text-sm">
@@ -77,21 +154,5 @@ function LoginPage() {
         </div>
     );
 }
-
-const InputField = ({ label, name, type, value, onChange, placeholder, required }) => (
-    <div>
-        <label htmlFor={name} className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">{label}</label>
-        <input
-            id={name}
-            name={name}
-            type={type}
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            required={required}
-            className="w-full px-4 py-2 rounded-lg border transition-colors duration-200 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
-        />
-    </div>
-);
 
 export default LoginPage;

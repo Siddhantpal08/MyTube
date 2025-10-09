@@ -17,7 +17,7 @@ const router = Router();
 
 // --- Public Routes (No JWT required) ---
 router.route("/").get(getAllVideos);
-router.route("/:videoId").get(getVideoById);
+router.route("/:videoId").get(verifyJWT, getVideoById);
 
 
 // --- Protected Routes (JWT is required) ---

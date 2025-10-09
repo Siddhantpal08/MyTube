@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient';
 import { useAuth } from '../Context/AuthContext';
-import { timeSince, placeholderAvatar } from '../utils/formatters';
-import TweetCard from './TweetCard'; // We will create a separate TweetCard component
+import toast from 'react-hot-toast';
+import TweetCard from './TweetCard'; // Import the new, smart TweetCard
 
 function CommunityPage() {
     const { isAuthenticated } = useAuth();
-    const [tweets, setTweets] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [feedType, setFeedType] = useState(isAuthenticated ? 'subscribed' : 'global');
+    const [tweets, setTweets] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
+    const [feedType, setFeedType] = React.useState(isAuthenticated ? 'subscribed' : 'global');
 
     const pageTitle = feedType === 'subscribed' ? "Your Feed" : "Global Community";
     const emptyMessage = feedType === 'subscribed' 
         ? "Posts from channels you subscribe to will appear here."
         : "There are no posts yet. Be the first to share something!";
 
-    useEffect(() => {
+    React.useEffect(() => {
         const fetchTweets = async () => {
             setLoading(true);
             setError(null);
@@ -38,14 +38,15 @@ function CommunityPage() {
     }, [feedType, isAuthenticated]);
 
     const handleDeleteTweet = async (tweetId) => {
-        // Optimistically remove the tweet from the UI
+        // Optimistically remove the tweet from the UI for an instant feel
         setTweets(prevTweets => prevTweets.filter(tweet => tweet._id !== tweetId));
         try {
             await axiosClient.delete(`/tweets/${tweetId}`);
+            toast.success("Post deleted");
         } catch (error) {
             console.error("Failed to delete tweet:", error);
-            // In a real app, you might want to add the tweet back to the UI on failure
-            alert("Failed to delete the post.");
+            // In a real app, you would add the tweet back to the UI on failure
+            toast.error("Failed to delete post.");
         }
     };
 
@@ -63,7 +64,7 @@ function CommunityPage() {
                 )}
             </div>
 
-            {/* --- Feed Toggle Buttons --- */}
+            {/* --- Feed Toggle Buttons for logged-in users --- */}
             {isAuthenticated && (
                 <div className="flex space-x-2 border-b border-gray-700 mb-6">
                     <button onClick={() => setFeedType('subscribed')} className={`py-2 px-4 font-semibold ${feedType === 'subscribed' ? 'text-white border-b-2 border-white' : 'text-gray-400'}`}>For You</button>

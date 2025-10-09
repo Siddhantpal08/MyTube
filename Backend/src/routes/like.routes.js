@@ -1,28 +1,28 @@
-// src/routes/like.routes.js
 import { Router } from 'express';
 import {
     getLikedVideos,
     toggleCommentLike,
     toggleVideoLike,
     toggleTweetLike,
-    getVideoLikeStatus // <-- Import the new function
-} from "../controllers/like.controller.js"
-// Import BOTH auth middlewares
-import { verifyJWT, verifyJWTAndSetUser } from "../middlewares/auth.middleware.js"
+} from "../controllers/like.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// --- Public Route (with optional auth) ---
-// This allows anyone to see the like count, but also gets the logged-in user's like status.
-router.route("/video/:videoId").get(verifyJWTAndSetUser, getVideoLikeStatus);
-
-
-// --- All routes below this require a strict login ---
+// All routes in this file require a user to be logged in,
+// so we apply the authentication middleware at the top.
 router.use(verifyJWT);
 
-router.route("/toggle/v/:videoId").post(toggleVideoLike);
-router.route("/toggle/c/:commentId").post(toggleCommentLike);
-router.route("/toggle/t/:tweetId").post(toggleTweetLike);
+// Route to get all of the current user's liked videos
 router.route("/videos").get(getLikedVideos);
+
+// Route to toggle a like on a video
+router.route("/toggle/v/:videoId").post(toggleVideoLike);
+
+// Route to toggle a like on a comment
+router.route("/toggle/c/:commentId").post(toggleCommentLike);
+
+// Route to toggle a like on a tweet
+router.route("/toggle/t/:tweetId").post(toggleTweetLike);
 
 export default router;

@@ -6,145 +6,80 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Subscription } from "../models/subscription.model.js";
 
-// --- PUBLIC FEED (FOR GUESTS) ---
-const getAllTweets = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10 } = req.query;
-
-    const tweetsAggregate = Tweet.aggregate([
+const getTweetsAggregate = (matchStage = {}, userId = null) => {
+    return [
+        matchStage, // This will be the filter (e.g., all tweets, or tweets from subscribed channels)
         {
-            $lookup: {
+            $lookup: { // Join with likes
+                from: "likes",
+                localField: "_id",
+                foreignField: "tweet",
+                as: "likes"
+            }
+        },
+        {
+            $lookup: { // Join with users to get the owner's details
                 from: "users",
                 localField: "owner",
                 foreignField: "_id",
-                as: "ownerDetails",
-                pipeline: [
-                    {
-                        $project: {
-                            username: 1,
-                            fullName: 1,
-                            avatar: 1
-                        }
-                    }
-                ]
+                as: "owner",
+                pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }]
             }
         },
         {
             $addFields: {
-                owner: { $first: "$ownerDetails" }
+                likesCount: { $size: "$likes" },
+                owner: { $first: "$owner" },
+                // Check if the current logged-in user's ID is in the 'likes' array
+                isLiked: userId ? { $in: [new mongoose.Types.ObjectId(userId), "$likes.likedBy"] } : false
             }
         },
-        {
-            $project: {
-                ownerDetails: 0
-            }
-        },
-        {
-            $sort: { createdAt: -1 }
-        }
-    ]);
+        { $project: { likes: 0 } }, // Remove the full likes array to save bandwidth
+        { $sort: { createdAt: -1 } }
+    ];
+};
 
-    const options = {
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
-    };
+// --- CONTROLLERS ---
 
-    const result = await Tweet.aggregatePaginate(tweetsAggregate, options);
-
-    if (!result) {
-        throw new ApiError(500, "Could not retrieve tweets");
-    }
-
+const getAllTweets = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
+    // Use the aggregation pipeline for the public feed
+    const tweetsAggregate = Tweet.aggregate(getTweetsAggregate({}, req.user?._id));
+    const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
     return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
-// --- PERSONALIZED FEED (FOR LOGGED-IN USERS) ---
 const getSubscribedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
-    const userId = req.user._id;
-
-    const subscriptions = await Subscription.find({ subscriber: userId });
+    const subscriptions = await Subscription.find({ subscriber: req.user._id });
     const channelIds = subscriptions.map(sub => sub.channel);
-
-    const tweetsAggregate = Tweet.aggregate([
-        {
-            $match: {
-                owner: { $in: channelIds }
-            }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "owner",
-                foreignField: "_id",
-                as: "ownerDetails",
-                pipeline: [
-                    {
-                        $project: { username: 1, fullName: 1, avatar: 1 }
-                    }
-                ]
-            }
-        },
-        {
-            $addFields: {
-                owner: { $first: "$ownerDetails" }
-            }
-        },
-        {
-            $project: {
-                ownerDetails: 0
-            }
-        },
-        {
-            $sort: { createdAt: -1 }
-        }
-    ]);
-
-    const options = {
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
-    };
     
-    const result = await Tweet.aggregatePaginate(tweetsAggregate, options);
-
+    // Use the aggregation pipeline with a filter for subscribed channels
+    const tweetsAggregate = Tweet.aggregate(getTweetsAggregate({ $match: { owner: { $in: channelIds } } }, req.user._id));
+    const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
     return res.status(200).json(new ApiResponse(200, result, "Subscribed feed fetched successfully"));
 });
 
-// --- OTHER TWEET CONTROLLERS ---
-
 const createTweet = asyncHandler(async (req, res) => {
     const { content } = req.body;
- 
-    if (!content || content.trim() === "") {
-        throw new ApiError(400, "Tweet content is required");
-    }
- 
-    const tweet = await Tweet.create({
-        content,
-        owner: req.user._id,
-    });
- 
+    if (!content?.trim()) throw new ApiError(400, "Content is required");
+    const tweet = await Tweet.create({ content, owner: req.user._id });
     const createdTweet = await Tweet.findById(tweet._id).populate("owner", "username fullName avatar");
-
-    if (!createdTweet) {
-        throw new ApiError(500, "Something went wrong while creating the tweet");
-    }
- 
     return res.status(201).json(new ApiResponse(201, createdTweet, "Tweet created successfully"));
 });
 
-const getUserTweets = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
- 
-    if (!isValidObjectId(userId)) {
-        throw new ApiError(400, "Invalid user ID");
-    }
- 
-    const tweets = await Tweet.find({ owner: userId })
-        .populate("owner", "username fullName avatar")
-        .sort({ createdAt: -1 });
- 
-    return res.status(200).json(new ApiResponse(200, { docs: tweets }, "Fetched user tweets successfully"));
+const getTweetById = asyncHandler(async (req, res) => {
+    const { tweetId } = req.params;
+    if (!isValidObjectId(tweetId)) throw new ApiError(400, "Invalid Tweet ID");
+
+    // Use the aggregation pipeline to get a single tweet with all details
+    const tweetAggregate = Tweet.aggregate(getTweetsAggregate({ $match: { _id: new mongoose.Types.ObjectId(tweetId) } }, req.user?._id));
+    const tweet = await tweetAggregate.exec();
+    
+    if (!tweet.length) throw new ApiError(404, "Tweet not found");
+    return res.status(200).json(new ApiResponse(200, tweet[0], "Tweet fetched successfully"));
 });
+
 
 const updateTweet = asyncHandler(async (req, res) => {
   const { tweetId } = req.params;
@@ -207,9 +142,9 @@ const deleteTweet = asyncHandler(async (req, res) => {
 
 export {
     createTweet,
-    getUserTweets,
     updateTweet,
     deleteTweet,
     getAllTweets,
+    getTweetById,
     getSubscribedTweets,
 };

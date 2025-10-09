@@ -207,32 +207,61 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-    const user = await User.aggregate([
+    // 1. Fetch the user's watchHistory field directly and reverse it for chronological order.
+    // We use .select() for efficiency.
+    const user = await User.findById(req.user._id).select("watchHistory");
+
+    // If the user document is not found or watchHistory is empty, return an empty array early.
+    if (!user || user.watchHistory.length === 0) {
+        return res.status(200).json(new ApiResponse(200, [], "Watch history is empty"));
+    }
+
+    // 2. Aggregate pipeline using the reversed history array.
+    // We must respect the order of the watchHistory array, so we cannot just use a simple $match.
+    const historyVideos = await User.aggregate([
         { $match: { _id: new mongoose.Types.ObjectId(req.user._id) } },
+        {
+            $project: {
+                watchHistory: { $slice: ["$watchHistory", 20] } // Limit to the last 20 for performance (adjust as needed)
+            }
+        },
         {
             $lookup: {
                 from: "videos",
                 localField: "watchHistory",
                 foreignField: "_id",
-                as: "watchHistory",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "owner",
-                            foreignField: "_id",
-                            as: "owner",
-                            pipeline: [{ $project: { fullName: 1, username: 1, avatar: 1 } }]
-                        }
-                    },
-                    { $addFields: { owner: { $first: "$owner" } } }
-                ]
+                as: "videos"
             }
         },
-        { $project: { watchHistory: 1 } }
+        { $unwind: "$videos" }, // Deconstructs the videos array
+        {
+            $lookup: {
+                from: "users",
+                localField: "videos.owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+                pipeline: [{ $project: { fullName: 1, username: 1, avatar: 1 } }]
+            }
+        },
+        {
+            $addFields: {
+                "videos.owner": { $first: "$ownerDetails" }
+            }
+        },
+        {
+            $project: {
+                videos: 1,
+            }
+        }
     ]);
 
-    return res.status(200).json(new ApiResponse(200, user[0].watchHistory.reverse(), "Watch history fetched successfully"));
+    // Reorder the videos to match the original watchHistory sequence (most recent first)
+    const orderedHistory = user.watchHistory
+        .map(historyId => historyVideos.find(item => item.videos._id.equals(historyId))?.videos)
+        .filter(Boolean) // Remove any null/undefined results if a video was deleted
+        .reverse(); // Reverse to display most recent first
+
+    return res.status(200).json(new ApiResponse(200, orderedHistory, "Watch history fetched successfully"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -291,7 +320,6 @@ const searchChannels = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, users, "Channels fetched successfully"));
 });
 
-// --- THESE FUNCTIONS HAVE BEEN RESTORED ---
 const forgotPassword = asyncHandler(async (req, res) => {
     const { email } = req.body;
     if (!email) throw new ApiError(400, "Email is required");

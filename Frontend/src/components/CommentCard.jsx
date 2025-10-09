@@ -16,12 +16,20 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
     const [editedContent, setEditedContent] = useState(comment.content);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     
-    // State for the new like functionality
+    // State for the like functionality
     const [isLiked, setIsLiked] = useState(comment.isLiked || false);
     const [likesCount, setLikesCount] = useState(comment.likesCount || 0);
 
     // Determines if the current user owns this comment
     const isOwner = !comment.isExternal && (user?._id === comment.owner?._id);
+
+    // --- NEW: Time Limit Logic for Editing ---
+    // Calculate the time difference between now and when the comment was created.
+    const fifteenMinutes = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const commentTimestamp = new Date(comment.createdAt).getTime();
+    const currentTimestamp = new Date().getTime();
+    const canEdit = (currentTimestamp - commentTimestamp) < fifteenMinutes;
+    // --- End of New Logic ---
 
     // --- HANDLER FUNCTIONS ---
 
@@ -31,19 +39,16 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
             navigate('/login', { state: { from: location } });
             return;
         }
-        if (comment.isExternal) return; // Cannot like external YouTube comments
+        if (comment.isExternal) return;
 
-        // Optimistic UI update for instant feedback
         const originalState = isLiked;
         setIsLiked(prev => !prev);
         setLikesCount(prev => (originalState ? prev - 1 : prev + 1));
 
         try {
-            // Call the backend endpoint to toggle the like
             await axiosClient.post(`/likes/toggle/c/${comment._id}`);
         } catch (error) {
             toast.error("Failed to update like.");
-            // Revert UI on failure
             setIsLiked(originalState);
             setLikesCount(prev => (originalState ? prev + 1 : prev - 1));
         }
@@ -78,19 +83,17 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
     };
 
     // --- AVATAR URL LOGIC ---
-
-    // This robustly handles the avatar URL whether it's a string or an object with a .url property
+    // This handles the avatar URL whether it's a direct string or an object
     let avatarUrl = typeof comment.owner?.avatar === 'string' 
         ? comment.owner.avatar 
         : comment.owner?.avatar?.url;
 
-    // This ensures the URL is secure (https) to prevent browser blocking issues
+    // This ensures the URL is secure (https)
     if (avatarUrl && avatarUrl.startsWith('http://')) {
         avatarUrl = avatarUrl.replace('http://', 'https://');
     }
 
     // --- RENDER ---
-
     return (
         <>
             {showDeleteModal && (
@@ -133,9 +136,13 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
                                 <span className="text-xs text-gray-400">{formatCompactNumber(likesCount)}</span>
                             </div>
                             
+                            {/* The Edit and Delete buttons are now separate for individual control */}
                             {isOwner && (
                                 <>
-                                    <button onClick={() => setIsEditing(true)} className="text-xs text-gray-400 font-semibold hover:text-white">Edit</button>
+                                    {/* The Edit button will only show if canEdit is true */}
+                                    {canEdit && (
+                                        <button onClick={() => setIsEditing(true)} className="text-xs text-gray-400 font-semibold hover:text-white">Edit</button>
+                                    )}
                                     <button onClick={() => setShowDeleteModal(true)} className="text-xs text-gray-400 font-semibold hover:text-white">Delete</button>
                                 </>
                             )}

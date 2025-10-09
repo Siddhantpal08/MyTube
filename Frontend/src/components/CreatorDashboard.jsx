@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../Context/AuthContext'; // Assuming correct casing or symbolic link to context/authcontext
-import axiosClient from '../Api/axiosClient'; // Assuming correct casing or symbolic link to api/axiosclient
+import { useAuth } from '../Context/AuthContext';
+import axiosClient from '../Api/axiosClient';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import AnalyticsDashboard from '../components/AnalyticsDashboard'; // Assuming correct path to components
+import AnalyticsDashboard from '../components/AnalyticsDashboard'; 
+// Assuming the ConfirmationModal component is available
+import ConfirmationModal from '../components/ConfirmationModal'; 
 
 // --- MyContent Sub-Component (Handles Table Display and Actions) ---
 const MyContent = ({ videos, onEdit, onDelete }) => (
@@ -65,6 +67,10 @@ function CreatorDashboard() {
     const [activeTab, setActiveTab] = useState('content');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    
+    // State for modal
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [videoToDeleteId, setVideoToDeleteId] = useState(null);
 
     // --- Data Fetching Logic ---
     const fetchMyVideos = async () => {
@@ -87,26 +93,30 @@ function CreatorDashboard() {
     };
 
     useEffect(() => {
-        // Fetch videos when the user loads or authentication status changes
         fetchMyVideos();
     }, [user?._id]);
 
     // --- Action Handlers ---
 
-    // Handles the deletion of a video and updates the UI
-    const handleDeleteVideo = async (videoId) => {
-        // NOTE: Using window.confirm - consider replacing with a custom modal UI.
-        if (!window.confirm("Are you sure you want to permanently delete this video?")) {
-            return;
-        }
+    // 1. Initiates the deletion process by showing the modal
+    const confirmDelete = (videoId) => {
+        setVideoToDeleteId(videoId);
+        setShowDeleteModal(true);
+    };
 
+    // 2. Executes the deletion after modal confirmation
+    const handleDeleteVideo = async () => {
+        setShowDeleteModal(false); // Hide the modal immediately
+        if (!videoToDeleteId) return;
+
+        const videoId = videoToDeleteId;
         const originalVideos = myVideos;
+        
         // Optimistically remove the video from the UI
         setMyVideos(prev => prev.filter(video => video._id !== videoId));
 
         const toastId = toast.loading("Deleting video...");
         try {
-            // This relies on the deleteVideo controller in video.controller.js
             await axiosClient.delete(`/videos/${videoId}`);
             toast.success("Video deleted successfully.", { id: toastId });
         } catch (error) {
@@ -114,12 +124,14 @@ function CreatorDashboard() {
             toast.error(error.response?.data?.message || "Failed to delete video.", { id: toastId });
             // Revert the UI state on failure
             setMyVideos(originalVideos);
+        } finally {
+            setVideoToDeleteId(null);
         }
     };
 
-    // Handles navigation to the Edit Video page
+    // Handles navigation to the Edit Video page (Fix for button not working)
     const handleEditVideo = (videoId) => {
-        navigate(`/edit-video/${videoId}`);
+        navigate(`/edit-video/${videoId}`); // This should work now that window.confirm is gone.
     };
     
     // --- Render Logic ---
@@ -129,6 +141,16 @@ function CreatorDashboard() {
 
     return (
         <div className="p-4 md:p-6 lg:p-8">
+            {/* Confirmation Modal */}
+            {showDeleteModal && (
+                <ConfirmationModal 
+                    title="Confirm Deletion"
+                    message="Are you sure you want to permanently delete this video? This action cannot be undone."
+                    onConfirm={handleDeleteVideo}
+                    onCancel={() => setShowDeleteModal(false)}
+                />
+            )}
+
             <div className="flex justify-between items-center mb-6 border-b border-gray-200 dark:border-gray-700 pb-4">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Creator Dashboard</h1>
                 {/* Upload Video Button */}
@@ -157,7 +179,7 @@ function CreatorDashboard() {
                     <MyContent 
                         videos={myVideos} 
                         onEdit={handleEditVideo} 
-                        onDelete={handleDeleteVideo} 
+                        onDelete={confirmDelete} // Use confirmDelete here
                     />
                 )}
                 {/* AnalyticsDashboard should be correctly imported */}

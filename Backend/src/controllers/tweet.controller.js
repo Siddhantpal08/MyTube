@@ -50,7 +50,7 @@ const getFeedTweets = asyncHandler(async (req, res) => {
     
     // 1. Get IDs of subscribed channels
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
-    const subscribedChannelIds = subscriptions.map(sub => sub.channel);
+    const subscribedChannelIds = subscriptions.map(sub => new mongoose.Types.ObjectId(sub.channel));
     
     // 2. CRITICAL FIX: Add the logged-in user's own ID to the list
     const channelIdsToFetch = [

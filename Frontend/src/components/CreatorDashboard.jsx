@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../Context/AuthContext';
-import axiosClient from '../Api/axiosClient';
+import { useAuth } from '../Context/AuthContext'; // Assuming correct casing or symbolic link to context/authcontext
+import axiosClient from '../Api/axiosClient'; // Assuming correct casing or symbolic link to api/axiosclient
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-// FIX: Adjusted path casings for common folder structure issues
-import AnalyticsDashboard from '../components/AnalyticsDashboard'; // Assuming it's in components
-// If the above path fails, use: import AnalyticsDashboard from './AnalyticsDashboard'; 
+import AnalyticsDashboard from '../components/AnalyticsDashboard'; // Assuming correct path to components
 
 // --- MyContent Sub-Component (Handles Table Display and Actions) ---
 const MyContent = ({ videos, onEdit, onDelete }) => (
@@ -29,17 +27,17 @@ const MyContent = ({ videos, onEdit, onDelete }) => (
                                     <span className="font-medium text-gray-900 dark:text-white group-hover:text-red-500">{video.title}</span>
                                 </Link>
                             </td>
-                            <td className="py-3 px-4">{video.views}</td>
+                            <td className="py-3 px-4 text-gray-800 dark:text-gray-300">{video.views}</td>
                             <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(video.createdAt).toLocaleDateString()}</td>
                             <td className="py-3 px-4 whitespace-nowrap">
-                                {/* Edit Button - Links to the Edit Video Page */}
+                                {/* Edit Button */}
                                 <button
                                     onClick={() => onEdit(video._id)}
                                     className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 mr-4 font-semibold p-1 rounded-md transition-colors"
                                 >
                                     Edit
                                 </button>
-                                {/* Delete Button - Calls the delete handler */}
+                                {/* Delete Button */}
                                 <button
                                     onClick={() => onDelete(video._id)}
                                     className="text-red-600 dark:text-red-500 hover:text-red-800 dark:hover:text-red-400 font-semibold p-1 rounded-md transition-colors"
@@ -78,7 +76,6 @@ function CreatorDashboard() {
         try {
             setLoading(true);
             const response = await axiosClient.get(`/videos?userId=${user._id}`);
-            // Assuming data structure: response.data.data.docs
             setMyVideos(response.data.data.docs || []);
             setError(null);
         } catch (err) {
@@ -90,13 +87,15 @@ function CreatorDashboard() {
     };
 
     useEffect(() => {
+        // Fetch videos when the user loads or authentication status changes
         fetchMyVideos();
     }, [user?._id]);
 
     // --- Action Handlers ---
 
-    // Note: This uses window.confirm, consider replacing with a custom modal UI for production
+    // Handles the deletion of a video and updates the UI
     const handleDeleteVideo = async (videoId) => {
+        // NOTE: Using window.confirm - consider replacing with a custom modal UI.
         if (!window.confirm("Are you sure you want to permanently delete this video?")) {
             return;
         }
@@ -107,6 +106,7 @@ function CreatorDashboard() {
 
         const toastId = toast.loading("Deleting video...");
         try {
+            // This relies on the deleteVideo controller in video.controller.js
             await axiosClient.delete(`/videos/${videoId}`);
             toast.success("Video deleted successfully.", { id: toastId });
         } catch (error) {
@@ -117,14 +117,14 @@ function CreatorDashboard() {
         }
     };
 
+    // Handles navigation to the Edit Video page
     const handleEditVideo = (videoId) => {
-        // Navigate to the video edit route
         navigate(`/edit-video/${videoId}`);
     };
     
     // --- Render Logic ---
 
-    if (loading) return <div className="text-center p-8 text-lg font-medium">Loading your content...</div>;
+    if (loading) return <div className="text-center p-8 text-lg font-medium text-gray-700 dark:text-gray-300">Loading your content...</div>;
     if (error) return <div className="text-center text-red-500 p-8 bg-red-100 rounded-lg max-w-lg mx-auto mt-6">{error}</div>;
 
     return (

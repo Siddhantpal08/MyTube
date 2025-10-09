@@ -49,7 +49,6 @@ const userLinks = [
     { to: "/subscriptions", icon: <SubscriptionsIcon />, text: "Subscriptions" },
     { to: "/history", icon: <HistoryIcon />, text: "History" },
     { to: "/playlists", icon: <PlaylistIcon />, text: "Playlists" },
-    { to: "/my-videos", icon: <MyVideosIcon />, text: "My Videos" },
 ];
 
 const secondaryLinks = [

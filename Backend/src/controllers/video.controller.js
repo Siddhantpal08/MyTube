@@ -5,6 +5,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
+import { Comment } from "../models/comment.model.js"; // Needed for cascading delete/cleanup
+import { Like } from "../models/like.model.js"; // Needed for cascading delete/cleanup
+import { Playlist } from "../models/playlist.model.js"; // Needed for cascading delete/cleanup
 
 // --- HELPER FUNCTION TO ENSURE SECURE URLS ---
 const secureUrl = (url) => {
@@ -16,7 +19,7 @@ const secureUrl = (url) => {
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 12, query, sortBy, sortType, userId, username } = req.query;
+    const { page = 1, limit = 12, sortBy, sortType, userId, username } = req.query;
 
     const pipeline = [];
     const match = {};
@@ -53,8 +56,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     // 2. Flatten the owner array
     pipeline.push({ $addFields: { owner: { $first: "$owner" } } });
 
-    // 3. Add $project to explicitly select all fields, especially duration
-    // THIS IS THE FIX for NaN:NaN
+    // 3. Add $project to explicitly select all fields (Fixes NaN:NaN issue)
     pipeline.push({
         $project: {
             _id: 1,
@@ -62,11 +64,11 @@ const getAllVideos = asyncHandler(async (req, res) => {
             description: 1,
             thumbnail: 1,
             videofile: 1,
-            duration: 1,      // <-- CRITICAL: Include duration
+            duration: 1,
             views: 1,
             createdAt: 1,
             isPublished: 1,
-            owner: 1,         // Includes the populated owner object
+            owner: 1, 
         }
     });
 
@@ -137,7 +139,6 @@ const getVideoById = asyncHandler(async (req, res) => {
     }
 
     // First, we find the video and increment its view count.
-    // This also ensures the video exists and is published before we do more work.
     const videoExists = await Video.findOneAndUpdate(
         { _id: videoId, isPublished: true },
         { $inc: { views: 1 } }
@@ -147,7 +148,7 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video not found or is not published");
     }
 
-    // Now, run a robust aggregation pipeline to get the video and safely join the owner details.
+    // Aggregation pipeline to fetch video details
     const video = await Video.aggregate([
         {
             $match: {
@@ -161,28 +162,16 @@ const getVideoById = asyncHandler(async (req, res) => {
                 foreignField: "_id",
                 as: "ownerDetails",
                 pipeline: [
-                    {
-                        $project: {
-                            username: 1,
-                            fullName: 1,
-                            avatar: 1,
-                        }
-                    }
+                    { $project: { username: 1, fullName: 1, avatar: 1 } }
                 ]
             }
         },
         {
             $addFields: {
-                // This safely gets the first element from the ownerDetails array.
-                // If the owner was not found, the array will be empty, and this will result in `owner: null`.
                 owner: { $first: "$ownerDetails" }
             }
         },
-        {
-            $project: {
-                ownerDetails: 0 // Clean up the temporary field
-            }
-        }
+        { $project: { ownerDetails: 0 } }
     ]);
     
     if (!video.length) {
@@ -199,15 +188,14 @@ const getVideoById = asyncHandler(async (req, res) => {
             {
                 $pull: { watchHistory: new mongoose.Types.ObjectId(videoId) } 
             },
-            { new: true } // Return the user document AFTER $pull
+            { new: true }
         );
     
         if (user) {
             // 2. Add the video ID to the beginning of the array (most recent)
             user.watchHistory.unshift(new mongoose.Types.ObjectId(videoId)); 
             
-            // 3. Limit the array size (e.g., to 20 videos)
-            // You can adjust the limit as needed
+            // 3. Limit the array size 
             if (user.watchHistory.length > 20) {
                 user.watchHistory.pop(); // Remove the oldest item
             }
@@ -232,14 +220,17 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
-    const { title, description } = req.body;
-    const thumbnailFilePath = req.file?.path;
+    // We expect the request body to contain title, description, and/or a new thumbnail file
+    const { title, description } = req.body; 
+    // The file path comes from the multer middleware if a new file was uploaded
+    const thumbnailFilePath = req.file?.path; 
 
     if (!isValidObjectId(videoId)) throw new ApiError(400, "Invalid video ID");
 
     const video = await Video.findById(videoId);
     if (!video) throw new ApiError(404, "Video not found");
 
+    // Authorization check
     if (video.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not authorized to update this video");
     }
@@ -251,11 +242,18 @@ const updateVideo = asyncHandler(async (req, res) => {
     if (thumbnailFilePath) {
         const newThumbnail = await uploadOnCloudinary(thumbnailFilePath);
         if (!newThumbnail.url) throw new ApiError(500, "Thumbnail upload failed");
+        
         updates.thumbnail = newThumbnail.url;
+        
+        // Delete the old thumbnail from Cloudinary if it exists
         if (video.thumbnail) await deleteFromCloudinary(video.thumbnail);
     }
 
-    const updatedVideo = await Video.findByIdAndUpdate(videoId, { $set: updates }, { new: true });
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId, 
+        { $set: updates }, 
+        { new: true } // Return the updated document
+    );
     
     return res.status(200).json(new ApiResponse(200, updatedVideo, "Video updated successfully"));
 });
@@ -267,6 +265,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     const video = await Video.findById(videoId);
     if (!video) throw new ApiError(404, "Video not found");
 
+    // Authorization check
     if (video.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not authorized to delete this video");
     }
@@ -277,9 +276,21 @@ const deleteVideo = asyncHandler(async (req, res) => {
         deleteFromCloudinary(video.thumbnail)
     ]);
 
+    // Delete the video document
     await Video.findByIdAndDelete(videoId);
 
-    // TODO: Also remove this video from any likes, comments, playlists, etc.
+    // --- Cleanup/Cascading Delete (CRITICAL) ---
+    await Promise.all([
+        // 1. Remove video from all user watch histories
+        User.updateMany({}, { $pull: { watchHistory: videoId } }),
+        // 2. Delete all related comments
+        Comment.deleteMany({ video: videoId }),
+        // 3. Delete all related likes
+        Like.deleteMany({ video: videoId }),
+        // 4. Remove video from all playlists
+        Playlist.updateMany({}, { $pull: { videos: videoId } }),
+    ]);
+    
     return res.status(200).json(new ApiResponse(200, {}, "Video deleted successfully"));
 });
 

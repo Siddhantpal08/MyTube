@@ -65,6 +65,8 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, playlists, "User playlists fetched successfully"));
 });
 
+// In playlist.controller.js
+
 const getPlaylistById = asyncHandler(async (req, res) => {
     const { playlistId } = req.params;
 
@@ -94,10 +96,11 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                         },
                     },
                     { $unwind: "$owner" },
-                    { // This projects the final video fields, flattening the URLs
+                    { // This projects the final video fields, flattening ALL the URLs
                         $project: {
                             _id: 1,
-                            thumbnail: "$thumbnail.url", // Flatten thumbnail
+                            videoFile: "$videoFile.url", // Added this missing line
+                            thumbnail: "$thumbnail.url",
                             title: 1,
                             duration: 1,
                             views: 1,
@@ -106,7 +109,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                                 _id: "$owner._id",
                                 username: "$owner.username",
                                 fullName: "$owner.fullName",
-                                avatar: "$owner.avatar.url", // Flatten avatar
+                                avatar: "$owner.avatar.url",
                             },
                         },
                     },
@@ -128,7 +131,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 totalViews: { $sum: "$videos.views" },
             },
         },
-        { // This projects the final playlist fields, flattening the owner's avatar
+        { // This projects the final playlist fields
             $project: {
                 _id: 1,
                 name: 1,
@@ -141,7 +144,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                     _id: "$owner._id",
                     username: "$owner.username",
                     fullName: "$owner.fullName",
-                    avatar: "$owner.avatar.url", // Flatten avatar
+                    avatar: "$owner.avatar.url",
                 },
             },
         },
@@ -155,7 +158,6 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, playlist[0], "Playlist fetched successfully"));
 });
-
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const { playlistId, videoId } = req.params;
 

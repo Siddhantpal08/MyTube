@@ -67,6 +67,8 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
 // In playlist.controller.js
 
+// In playlist.controller.js
+
 const getPlaylistById = asyncHandler(async (req, res) => {
     const { playlistId } = req.params;
 
@@ -99,8 +101,8 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                     {
                         $project: {
                             _id: 1,
-                            videoFile: "$videoFile.url",
-                            thumbnail: "$thumbnail.url",
+                            videoFile: 1,
+                            thumbnail: 1, // CORRECTED
                             title: 1,
                             duration: 1,
                             views: 1,
@@ -109,7 +111,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                                 _id: "$owner._id",
                                 username: "$owner.username",
                                 fullName: "$owner.fullName",
-                                avatar: "$owner.avatar.url",
+                                avatar: "$owner.avatar", // CORRECTED
                             },
                         },
                     },
@@ -144,7 +146,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                     _id: "$owner._id",
                     username: "$owner.username",
                     fullName: "$owner.fullName",
-                    avatar: "$owner.avatar.url",
+                    avatar: "$owner.avatar", // CORRECTED
                 },
             },
         },
@@ -154,10 +156,30 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Playlist not found");
     }
 
+    // Secure all URLs before sending (good practice)
+    const finalPlaylist = playlist[0];
+    if (finalPlaylist.owner) {
+        finalPlaylist.owner.avatar = secureUrl(finalPlaylist.owner.avatar);
+    }
+    finalPlaylist.videos.forEach(video => {
+        video.thumbnail = secureUrl(video.thumbnail);
+        if (video.owner) {
+            video.owner.avatar = secureUrl(video.owner.avatar);
+        }
+    });
+
     return res
         .status(200)
-        .json(new ApiResponse(200, playlist[0], "Playlist fetched successfully"));
+        .json(new ApiResponse(200, finalPlaylist, "Playlist fetched successfully"));
 });
+
+// Helper function (should already be in your controller file)
+const secureUrl = (url) => {
+    if (url && url.startsWith('http://')) {
+        return url.replace('http://', 'https://');
+    }
+    return url;
+};
 
 
 

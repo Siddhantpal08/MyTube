@@ -84,7 +84,7 @@ function Header({ onMenuClick }) {
                                 <div className="px-4 py-2 text-sm text-red-600 dark:text-red-400">{user?.username}</div>
                                 <div className="border-t border-gray-200 dark:border-gray-700"></div>
                                 <Link to={`/channel/${user?.username}`} onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Your Channel</Link>
-                                <Link to="/creator/dashboard" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Studio</Link>
+                                <Link to="/dashboard" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Studio</Link>
                                 <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</button>
                             </div>
                         )}

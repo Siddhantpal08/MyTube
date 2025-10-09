@@ -5,7 +5,6 @@ import axiosClient from '../Api/axiosClient';
 import { timeSince, placeholderAvatar, formatCompactNumber } from '../utils/formatters';
 import toast from 'react-hot-toast';
 
-// Helper function to check if a tweet is recent enough to be edited (e.g., within 15 minutes)
 const canEdit = (createdAt) => {
     const diffInMinutes = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60);
     return diffInMinutes < 15;
@@ -15,7 +14,6 @@ const TweetCard = ({ tweet, onDelete }) => {
     const { user, isAuthenticated } = useAuth();
     const isOwner = user?._id === tweet.owner?._id;
 
-    // State for optimistic UI updates for likes
     const [isLiked, setIsLiked] = useState(tweet.isLiked);
     const [likesCount, setLikesCount] = useState(tweet.likesCount);
 
@@ -24,15 +22,12 @@ const TweetCard = ({ tweet, onDelete }) => {
             return toast.error("Please log in to like posts.");
         }
         
-        // Optimistic update: change the UI instantly
         setIsLiked(prev => !prev);
         setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
 
         try {
-            // Send the request to the backend
             await axiosClient.post(`/likes/toggle/t/${tweet._id}`);
         } catch (error) {
-            // If the request fails, revert the UI to its original state
             setIsLiked(prev => !prev);
             setLikesCount(prev => isLiked ? prev + 1 : prev - 1);
             toast.error("Failed to update like status.");
@@ -55,7 +50,6 @@ const TweetCard = ({ tweet, onDelete }) => {
                         <p className="text-gray-300 mt-1 whitespace-pre-wrap">{tweet.content}</p>
                     </div>
 
-                    {/* --- Edit and Delete Buttons --- */}
                     {isOwner && (
                         <div className="flex-shrink-0 flex items-center space-x-2">
                             {canEdit(tweet.createdAt) && (
@@ -70,10 +64,12 @@ const TweetCard = ({ tweet, onDelete }) => {
                     )}
                 </div>
 
-                {/* --- Like Button and Count --- */}
+                {/* --- THE FIX IS HERE --- */}
                 <div className="mt-3 flex items-center">
-                    <button onClick={handleLike} className={`flex items-center space-x-2 ${isLiked ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition-colors`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 015.13-1.637l.852.341.852-.341a4.5 4.5 0 015.13 1.637l2.877 4.801a4.5 4.5 0 01-1.638 5.13l-4.8 2.877a4.5 4.5 0 01-5.13-1.637l-.852-.341-.852.341a4.5 4.5 0 01-5.13-1.637l-2.877-4.8a4.5 4.5 0 011.638-5.132l4.8-2.877z" /></svg>
+                    <button onClick={handleLike} className={`flex items-center space-x-2 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 015.13-1.637l.852.341.852-.341a4.5 4.5 0 015.13 1.637l2.877 4.801a4.5 4.5 0 01-1.638 5.13l-4.8 2.877a4.5 4.5 0 01-5.13-1.637l-.852-.341-.852.341a4.5 4.5 0 01-5.13-1.637l-2.877-4.8a4.5 4.5 0 011.638-5.132l4.8-2.877z" />
+                        </svg>
                         <span className="font-semibold text-sm">{formatCompactNumber(likesCount)}</span>
                     </button>
                 </div>

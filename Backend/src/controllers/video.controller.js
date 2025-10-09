@@ -121,7 +121,7 @@ const getVideoById = asyncHandler(async (req, res) => {
         },
         { $inc: { views: 1 } },
         { new: true }
-    ).populate("owner", "username fullName avatar");
+    )//.populate("owner", "username fullName avatar");
 
     if (!video) {
         throw new ApiError(404, "Video not found");

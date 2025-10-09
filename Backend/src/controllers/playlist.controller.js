@@ -96,10 +96,10 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                         },
                     },
                     { $unwind: "$owner" },
-                    { // This projects the final video fields, flattening ALL the URLs
+                    { // This projects the final video fields, flattening the URLs
                         $project: {
                             _id: 1,
-                            videoFile: "$videoFile.url", // Added this missing line
+                            videoFile: "$videoFile.url",
                             thumbnail: "$thumbnail.url",
                             title: 1,
                             duration: 1,
@@ -158,6 +158,9 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, playlist[0], "Playlist fetched successfully"));
 });
+
+
+
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const { playlistId, videoId } = req.params;
 

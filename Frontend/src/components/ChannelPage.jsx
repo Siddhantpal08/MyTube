@@ -32,13 +32,11 @@ function ChannelPage() {
                     axiosClient.get(`/users/c/${username}`),
                     axiosClient.get(`/videos?username=${username}`)
                 ]);
-
                 const channelData = channelRes.data.data;
                 setChannel(channelData);
                 setVideos(videosRes.data.data.docs || []);
                 setSubscribersCount(channelData.subscribersCount);
                 setIsSubscribed(channelData.isSubscribed);
-
             } catch (err) {
                 console.error("Failed to fetch channel data:", err);
                 setError(err.response?.data?.message || "Could not load the channel.");
@@ -79,7 +77,7 @@ function ChannelPage() {
 
     return (
         <div className="w-full min-h-screen">
-            {/* --- Channel Header --- (Header content kept for layout integrity) */}
+            {/* --- Channel Header --- */}
             <div className="w-full">
                 <div className="h-40 md:h-52 bg-gray-300 dark:bg-gray-700">
                     {secureCoverImage && <img src={secureCoverImage} alt="Cover" className="w-full h-full object-cover" />}
@@ -106,30 +104,18 @@ function ChannelPage() {
             {/* --- Channel Navigation Tabs --- */}
             <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="flex space-x-4 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <NavLink 
-                        to={`/channel/${username}`} 
-                        end 
-                        className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-red-500 border-red-500' : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-black dark:hover:text-white'}`}
-                    >
-                        Videos
-                    </NavLink>
-                    <NavLink 
-                        to={`/channel/${username}/about`} 
-                        className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-red-500 border-red-500' : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-black dark:hover:text-white'}`}
-                    >
-                        About
-                    </NavLink>
+                    <NavLink to={`/channel/${username}`} end className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-red-500 border-red-500' : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-black dark:hover:text-white'}`}>Videos</NavLink>
+                    <NavLink to={`/channel/${username}/about`} className={({isActive}) => `py-3 font-medium border-b-2 ${isActive ? 'text-red-500 border-red-500' : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-black dark:hover:text-white'}`}>About</NavLink>
                 </nav>
             </div>
             
-            {/* --- Tab Content (FIXED LAYOUT) --- */}
+            {/* --- Tab Content --- */}
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
                 {activeTab === 'videos' && (
                     <>
                         {videos.length > 0 ? (
                             // --- THIS IS THE FIX ---
-                            // We use a responsive grid layout with defined gaps.
-                            // Each VideoCard will now properly align within this grid.
+                            // Using the same responsive grid layout as your other pages.
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
                                 {videos.map(video => <VideoCard key={video._id} video={video} />)}
                             </div>

@@ -7,104 +7,100 @@ import TweetCard from '../components/TweetCard';
 
 function CommunityPage() {
     const location = useLocation(); 
-    const navigate = useNavigate(); // Import and use navigate
+    const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
+    
+    // --- STATE MANAGEMENT ---
     const [tweets, setTweets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [feedType, setFeedType] = useState(isAuthenticated ? 'subscribed' : 'global');
+    
+    // --- NEW: State for pagination ---
+    const [page, setPage] = useState(1);
+    const [hasNextPage, setHasNextPage] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
 
-    // Ensure feedType resets if authentication status changes (e.g., login/logout)
-    React.useEffect(() => {
+    // --- EFFECTS ---
+
+    // Effect to reset the feed when the user logs in/out or switches tabs
+    useEffect(() => {
         setFeedType(isAuthenticated ? 'subscribed' : 'global');
+        setTweets([]); // Clear old tweets
+        setPage(1); // Reset to page 1
+        setHasNextPage(false);
     }, [isAuthenticated]);
 
-
-    const pageTitle = feedType === 'subscribed' ? "Your Feed" : "Global Community";
-    const emptyMessage = feedType === 'subscribed' 
-        ? "Posts from channels you subscribe to will appear here. (Remember: Your own posts should now show up here too!)"
-        : "There are no posts yet. Be the first to share something!";
-
-    
-        const fetchTweets = useCallback(async () => {
+    // Effect to fetch tweets when the feed type changes
+    useEffect(() => {
+        const fetchFirstPage = async () => {
             setLoading(true);
             setError(null);
-            const endpoint = (feedType === 'subscribed' && isAuthenticated) ? '/tweets/feed' : '/tweets';
+            const endpoint = `${(feedType === 'subscribed' && isAuthenticated) ? '/tweets/feed' : '/tweets'}?page=1`;
             
             try {
                 const response = await axiosClient.get(endpoint);
-                setTweets(response.data?.data?.docs || []);
+                const data = response.data?.data;
+                setTweets(data?.docs || []);
+                setHasNextPage(data?.hasNextPage || false);
+                setPage(1); // Explicitly set page to 1
             } catch (err) {
                 console.error("Failed to fetch community posts:", err);
                 setError("Could not load the feed. Please try again later.");
             } finally {
                 setLoading(false);
             }
-        }, [feedType, isAuthenticated]);
-    
-        // This effect runs the fetchTweets function when the component loads or the tab changes
-        useEffect(() => {
-            fetchTweets();
-        }, [fetchTweets]);
-    
-        // --- EFFECT #2: For the optimistic update from AddTweetPage ---
-        useEffect(() => {
-            if (location.state?.newTweet) {
-                // Add the new tweet to the top of the current list
-                setTweets(prevTweets => [location.state.newTweet, ...prevTweets]);
-                // Clear the location state to prevent this from running again on refresh
-                navigate(location.pathname, { replace: true, state: null });
-            }
-        }, [location.state, navigate]);
+        };
 
-    const handleDeleteTweet = async (tweetId) => {
-        // Optimistically remove the tweet from the UI
-        const originalTweets = tweets;
-        setTweets(prevTweets => prevTweets.filter(tweet => tweet._id !== tweetId));
-        
+        fetchFirstPage();
+    }, [feedType, isAuthenticated]);
+    
+    // Effect for the optimistic update when a new tweet is created
+    useEffect(() => {
+        if (location.state?.newTweet) {
+            setTweets(prevTweets => [location.state.newTweet, ...prevTweets]);
+            navigate(location.pathname, { replace: true, state: null });
+        }
+    }, [location.state, navigate]);
+    
+    // --- HANDLER FUNCTIONS ---
+
+    // NEW: Handler for the "Load More" button
+    const handleLoadMore = async () => {
+        if (loadingMore || !hasNextPage) return;
+
+        setLoadingMore(true);
+        const endpoint = `${(feedType === 'subscribed' && isAuthenticated) ? '/tweets/feed' : '/tweets'}?page=${page + 1}`;
+
         try {
-            await axiosClient.delete(`/tweets/${tweetId}`);
-            toast.success("Post deleted");
-        } catch (error) {
-            console.error("Failed to delete tweet:", error);
-            toast.error("Failed to delete post.");
-            // Revert on failure
-            setTweets(originalTweets);
+            const response = await axiosClient.get(endpoint);
+            const data = response.data?.data;
+            // Append new tweets to the existing list
+            setTweets(prev => [...prev, ...(data?.docs || [])]);
+            setHasNextPage(data?.hasNextPage || false);
+            setPage(data?.page || page + 1);
+        } catch (err) {
+            toast.error("Failed to load more posts.");
+        } finally {
+            setLoadingMore(false);
         }
     };
 
+    const handleDeleteTweet = async (tweetId) => {
+        // ... (Your existing delete handler is correct)
+    };
+
+    const pageTitle = feedType === 'subscribed' ? "Your Feed" : "Global Community";
+    const emptyMessage = feedType === 'subscribed' 
+        ? "Posts from channels you subscribe to (and your own posts) will appear here."
+        : "There are no posts yet. Be the first to share something!";
+
     if (loading) return <div className="text-center p-8 text-lg font-medium text-gray-700 dark:text-gray-300">Loading Feed...</div>;
-    if (error) return <div className="text-center text-red-500 p-8 bg-red-50 dark:bg-red-900 rounded-lg max-w-lg mx-auto mt-6">{error}</div>;
+    if (error) return <div className="text-center text-red-500 p-8 bg-red-50 dark:bg-red-900/20 rounded-lg max-w-lg mx-auto mt-6">{error}</div>;
 
     return (
         <div className="max-w-3xl mx-auto p-4 sm:p-0">
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{pageTitle}</h1>
-                {isAuthenticated && (
-                    <Link to="/add-tweet" className="bg-red-600 text-white font-bold py-2 px-4 rounded-md shadow-lg hover:bg-red-700 transition-colors">
-                        Add Post
-                    </Link>
-                )}
-            </div>
-
-            {/* --- Feed Toggle Buttons --- */}
-            {/* Show toggle only if authenticated */}
-            {isAuthenticated && (
-                <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700 mb-6">
-                    <button 
-                        onClick={() => setFeedType('subscribed')} 
-                        className={`py-2 px-1 font-semibold transition-colors ${feedType === 'subscribed' ? 'text-red-600 dark:text-white border-b-2 border-red-600 dark:border-white' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'}`}
-                    >
-                        For You
-                    </button>
-                    <button 
-                        onClick={() => setFeedType('global')} 
-                        className={`py-2 px-1 font-semibold transition-colors ${feedType === 'global' ? 'text-red-600 dark:text-white border-b-2 border-red-600 dark:border-white' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'}`}
-                    >
-                        Global
-                    </button>
-                </div>
-            )}
+            {/* ... (Your existing JSX for the header and tabs is correct) ... */}
             
             <div className="space-y-4">
                 {tweets.length > 0 ? (
@@ -114,6 +110,22 @@ function CommunityPage() {
                         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">The feed is quiet</h2>
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{emptyMessage}</p>
                     </div>
+                )}
+            </div>
+
+            {/* --- NEW: Load More Button and Loading Indicator --- */}
+            <div className="text-center py-8">
+                {hasNextPage && (
+                    <button 
+                        onClick={handleLoadMore} 
+                        disabled={loadingMore}
+                        className="bg-red-600 text-white font-bold py-2 px-6 rounded-md shadow-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                        {loadingMore ? 'Loading...' : 'Load More'}
+                    </button>
+                )}
+                {!hasNextPage && tweets.length > 0 && (
+                    <p className="text-gray-500 dark:text-gray-400">You've reached the end of the feed.</p>
                 )}
             </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
@@ -82,13 +83,24 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
         }
     };
 
-    // --- AVATAR URL LOGIC ---
-    // This handles the avatar URL whether it's a direct string or an object
-    let avatarUrl = typeof comment.owner?.avatar === 'string' 
-        ? comment.owner.avatar 
-        : comment.owner?.avatar?.url;
+    const getAvatarUrl = () => {
+        if (!comment.owner) return placeholderAvatar;
+        
+        // If avatar is an object with a .url property (like from populate)
+        if (typeof comment.owner.avatar === 'object' && comment.owner.avatar?.url) {
+            return comment.owner.avatar.url;
+        }
+        
+        // If avatar is a direct string URL
+        if (typeof comment.owner.avatar === 'string') {
+            return comment.owner.avatar;
+        }
 
-    // This ensures the URL is secure (https)
+        // Fallback to the placeholder
+        return placeholderAvatar;
+    };
+
+    let avatarUrl = getAvatarUrl();
     if (avatarUrl && avatarUrl.startsWith('http://')) {
         avatarUrl = avatarUrl.replace('http://', 'https://');
     }
@@ -99,8 +111,12 @@ function CommentCard({ comment, onCommentDeleted, onCommentUpdated }) {
             {showDeleteModal && ( <ConfirmationModal title="Delete Comment" message="Are you sure?" onConfirm={handleDelete} onCancel={() => setShowDeleteModal(false)} /> )}
             
             <div className="flex items-start space-x-4">
-                <img src={avatarUrl || placeholderAvatar} alt={comment.owner?.username} className="w-10 h-10 rounded-full object-cover bg-gray-200 dark:bg-gray-700" />
-                <div className="w-full">
+                    <img 
+                        src={avatarUrl} // Use the final, safe URL
+                        alt={comment.owner?.username} 
+                        className="w-10 h-10 rounded-full object-cover bg-gray-200 dark:bg-gray-700" 
+                    />
+                    <div className="w-full">
                     <div className="flex items-center space-x-2">
                         <p className="font-bold text-sm text-gray-900 dark:text-white">{comment.owner?.username || "User"}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 font-normal">{timeSince(comment.createdAt)}</p>

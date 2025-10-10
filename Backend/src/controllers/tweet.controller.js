@@ -48,38 +48,30 @@ const getAllTweets = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
-const getFeedTweets = asyncHandler(async (req, res) => {
-    console.log("--- Executing getFeedTweets Controller ---");
+// In src/controllers/tweet.controller.js
 
+const getFeedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     
-    // Find all channels the user subscribes to
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
-    console.log("1. Found subscriptions:", subscriptions.length);
-
     const subscribedChannelIds = subscriptions.map(sub => sub.channel);
-    console.log("2. Subscribed Channel IDs:", subscribedChannelIds);
     
-    const channelIdsToFetch = [
-        ...subscribedChannelIds, 
-        req.user._id 
-    ];
-    console.log("3. Final list of Channel IDs to fetch from:", channelIdsToFetch);
+    // --- THE FINAL FIX ---
+    // Create an array with potential duplicates
+    const channelIdsWithDuplicates = [...subscribedChannelIds, req.user._id];
+    // Use a Set to automatically remove any duplicates, then convert back to an array
+    const channelIdsToFetch = [...new Set(channelIdsWithDuplicates)];
 
-    const matchCondition = { 
-        owner: { $in: channelIdsToFetch },
-        parentTweet: { $exists: false }
-    };
-    console.log("4. Final MongoDB Match Condition:", JSON.stringify(matchCondition));
-
-    const pipeline = getTweetsAggregatePipeline(matchCondition, req.user._id);
+    const pipeline = getTweetsAggregatePipeline(
+        { 
+            owner: { $in: channelIdsToFetch },
+            parentTweet: { $exists: false }
+        }, 
+        req.user._id
+    );
 
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
-    
-    console.log(`5. Query finished. Found ${result.docs.length} tweets.`);
-    console.log("--- Finished getFeedTweets ---");
-
     return res.status(200).json(new ApiResponse(200, result, "User feed fetched successfully"));
 });
 

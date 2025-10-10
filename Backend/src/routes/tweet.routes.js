@@ -5,25 +5,23 @@ import {
     updateTweet,
     deleteTweet,
     getAllTweets,
-    getFeedTweets, // <-- RENAMED IMPORT
+    getFeedTweets,     // Correctly named import
     getTweetReplies 
 } from "../controllers/tweet.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// This route is now PUBLIC. It fetches all tweets for the community page.
+// Public routes
 router.route("/").get(getAllTweets);
 router.route("/replies/:tweetId").get(getTweetReplies);
 
-// This middleware protects all routes defined BELOW it.
-router.use(verifyJWT);
+router.use(verifyJWT); // Protect all routes below this
 
-// --- PROTECTED ROUTES ---
+// Protected routes
 router.route("/").post(createTweet);
-// FIX: Updated endpoint to call the new controller name
-router.route("/feed").get(getFeedTweets); 
-router.route("/user/:userId").get(getTweetById);
+router.route("/feed").get(getFeedTweets); // This now correctly matches the import
+router.route("/user/:userId").get(getTweetById); // Note: This route might be what you intended for get all tweets by a user
 router.route("/:tweetId").patch(updateTweet).delete(deleteTweet);
 
 export default router;

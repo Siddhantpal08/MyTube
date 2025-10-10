@@ -7,10 +7,10 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { Subscription } from "../models/subscription.model.js";
 import { Like } from "../models/like.model.js";
 
-// A reusable pipeline for fetching tweets
 const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
     const loggedInUserId = userId ? new mongoose.Types.ObjectId(userId) : null;
-    return [
+
+    const pipeline = [
         { $match: matchCondition },
         { $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" } },
         { $lookup: { from: "users", localField: "owner", foreignField: "_id", as: "owner", pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }] } },
@@ -20,14 +20,24 @@ const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
                 likesCount: { $size: "$likes" },
                 replyCount: { $size: "$replies" },
                 owner: { $first: "$owner" },
-                isLiked: { $cond: { if: { $in: [loggedInUserId, "$likes.likedBy"] }, then: true, else: false } }
+                // --- THIS IS THE FINAL FIX ---
+                isLiked: {
+                    $cond: {
+                        // First, check if there IS a loggedInUserId
+                        if: loggedInUserId, 
+                        // If yes, then check if it's in the likes array
+                        then: { $in: [loggedInUserId, "$likes.likedBy"] },
+                        // If no, isLiked is automatically false
+                        else: false
+                    }
+                }
             }
         },
         { $project: { likes: 0, replies: 0 } },
-        { $sort: { createdAt: -1 } }
+        { $sort: { createdAt: -1 } } 
     ];
+    return pipeline;
 };
-
 // Get all public tweets
 const getAllTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;

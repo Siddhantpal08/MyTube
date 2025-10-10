@@ -4,7 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken';
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 // Add these missing imports:
 import { Video } from "../models/video.model.js"; // You need this!
@@ -372,7 +372,7 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "User account and all associated data deleted successfully"));
 });
 
-// --- THIS FUNCTION IS REPLACED ---
+// --- THIS FUNCTION IS REPLACED with a simpler, correct version ---
 const getWatchHistory = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id).populate({
         path: "watchHistory",
@@ -386,16 +386,16 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User not found");
     }
 
-    // The watchHistory is already sorted from newest to oldest by how you add to it.
-    // No need to reverse it here.
+    // Your backend already saves the history in newest-first order.
+    // We just need to return it as is. Mongoose's populate respects this order.
     return res.status(200).json(new ApiResponse(200, user.watchHistory, "Watch history fetched successfully"));
 });
 
-
-// --- THIS IS THE NEW FUNCTION ---
+// --- THIS IS THE CORRECTED FUNCTION ---
 const removeVideoFromHistory = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
 
+    // This check will now work because isValidObjectId is imported
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid Video ID");
     }
@@ -407,8 +407,6 @@ const removeVideoFromHistory = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, {}, "Video removed from watch history successfully"));
 });
-
-
 
 // --- THE FINAL, COMPLETE EXPORT STATEMENT ---
 export { 

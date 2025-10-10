@@ -1,21 +1,18 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom'; // Import useLocation
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axiosClient from '../Api/axiosClient'; 
 import { useAuth } from '../Context/AuthContext';
 import toast from 'react-hot-toast';
 import TweetCard from '../components/TweetCard'; 
 
 function CommunityPage() {
-    // FIX: Destructure location for the refresh trigger
     const location = useLocation(); 
-    const { isAuthenticated, user } = useAuth();
-    const [tweets, setTweets] = useState([]); // Use React.useState for consistency
+    const navigate = useNavigate(); // Import and use navigate
+    const { isAuthenticated } = useAuth();
+    const [tweets, setTweets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
-    // Initialize to 'subscribed' only if authenticated, otherwise default to 'global'
-    const initialFeedType = isAuthenticated ? 'subscribed' : 'global';
-    const [feedType, setFeedType] = useState(initialFeedType);
+    const [feedType, setFeedType] = useState(isAuthenticated ? 'subscribed' : 'global');
 
     // Ensure feedType resets if authentication status changes (e.g., login/logout)
     React.useEffect(() => {
@@ -28,12 +25,12 @@ function CommunityPage() {
         ? "Posts from channels you subscribe to will appear here. (Remember: Your own posts should now show up here too!)"
         : "There are no posts yet. Be the first to share something!";
 
-    React.useEffect(() => {
+    
+    // --- EFFECT #1: For fetching tweets on load and when the tab changes ---
+    useEffect(() => {
         const fetchTweets = async () => {
             setLoading(true);
             setError(null);
-            
-            // If the user is logged out, always default to the global endpoint
             const endpoint = (feedType === 'subscribed' && isAuthenticated) ? '/tweets/feed' : '/tweets';
             
             try {
@@ -41,23 +38,25 @@ function CommunityPage() {
                 setTweets(response.data?.data?.docs || []);
             } catch (err) {
                 console.error("Failed to fetch community posts:", err);
-                
-                // If fetching subscribed feed fails (e.g., due to auth), try switching to global
-                if (feedType === 'subscribed' && err.response?.status === 401) {
-                    toast.error("Authentication required for 'For You' feed.");
-                    setFeedType('global'); 
-                } else {
-                    setError("Could not load the feed. Please try again later.");
-                }
+                setError("Could not load the feed. Please try again later.");
             } finally {
                 setLoading(false);
             }
         };
 
         fetchTweets();
-        // FIX: Add location.state to the dependency array
-        // This forces the feed to reload when the AddTweetPage navigates back with the new state.
-    }, [feedType, isAuthenticated, location.state]); 
+    }, [feedType, isAuthenticated]); // This effect no longer depends on location.state
+
+    // --- EFFECT #2: For handling the optimistic update ---
+    useEffect(() => {
+        if (location.state?.newTweet) {
+            // Add the new tweet from the previous page to the top of the list
+            setTweets(prevTweets => [location.state.newTweet, ...prevTweets]);
+            
+            // Clear the location state to prevent re-adding the tweet on a page refresh
+            navigate(location.pathname, { replace: true, state: null });
+        }
+    }, [location.state, navigate]);
 
     const handleDeleteTweet = async (tweetId) => {
         // Optimistically remove the tweet from the UI

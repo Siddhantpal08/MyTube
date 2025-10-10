@@ -2,19 +2,28 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { timeSince, formatCompactNumber, placeholderAvatar } from '../utils/formatters';
 
-// This function is for parsing duration from YouTube API's format, it can stay as is.
-const parseDuration = (duration) => {
-    // ... your existing parseDuration function ...
-    if (typeof duration !== 'string') return null; // Added type check for safety
+// Parses YouTube's specific "PT1M23S" format
+const parseISODuration = (isoDuration) => {
+    if (typeof isoDuration !== 'string') return null;
     const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
-    const matches = duration.match(regex);
-    if (!matches) return duration; // Return original if it doesn't match, might be a number in seconds
+    const matches = isoDuration.match(regex);
+    if (!matches) return null;
+
     const hours = parseInt(matches[1] || 0);
     const minutes = parseInt(matches[2] || 0);
     const seconds = parseInt(matches[3] || 0);
+    
     if (hours > 0) {
         return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+};
+
+// Formats a duration given in total seconds
+const formatSeconds = (totalSeconds) => {
+    if (isNaN(totalSeconds)) return null;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.round(totalSeconds % 60);
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
 };
 
@@ -24,33 +33,29 @@ function VideoCard({ video }) {
     const channelName = video.owner?.username || video.channelTitle;
     const isChannelLinkable = !!video.owner?.username;
 
-    // --- NEW: ROBUST URL HANDLING ---
-    // 1. Intelligently get the thumbnail URL
-    let thumbnailUrl = typeof video.thumbnail === 'string' 
-        ? video.thumbnail 
-        : video.thumbnail?.url;
-    // Ensure it's secure
+    // --- ROBUST URL & DURATION HANDLING ---
+    
+    let thumbnailUrl = typeof video.thumbnail === 'string' ? video.thumbnail : video.thumbnail?.url;
     if (thumbnailUrl && thumbnailUrl.startsWith('http://')) {
         thumbnailUrl = thumbnailUrl.replace('http://', 'https://');
     }
     
-    // 2. Intelligently get the avatar URL
-    let avatarUrl = typeof video.owner?.avatar === 'string'
-        ? video.owner.avatar
-        : video.owner?.avatar?.url;
-    // Ensure it's secure
+    let avatarUrl = typeof video.owner?.avatar === 'string' ? video.owner.avatar : video.owner?.avatar?.url;
     if (avatarUrl && avatarUrl.startsWith('http://')) {
         avatarUrl = avatarUrl.replace('http://', 'https://');
     }
-    // --- END NEW LOGIC ---
+
+    // --- THIS IS THE FIX ---
+    // This checks the data type of `video.duration` and uses the correct formatter.
+    const formattedDuration = typeof video.duration === 'string' 
+        ? parseISODuration(video.duration) 
+        : formatSeconds(video.duration);
 
     const handleChannelClick = (e) => {
         if (!isChannelLinkable) {
             e.preventDefault();
             return;
         }
-        // This prevents the default link behavior to allow navigate() to handle it,
-        // which is useful in single-page applications.
         e.preventDefault(); 
         navigate(`/channel/${video.owner.username}`);
     };
@@ -60,21 +65,23 @@ function VideoCard({ video }) {
             <Link to={videoLink}>
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-800">
                     <img 
-                        src={thumbnailUrl} // Use the new robust variable
+                        src={thumbnailUrl} 
                         alt={video.title} 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
                     />
-                    {/* Duration logic can be improved if needed, but keeping as is for now */}
-                    <span className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
-                        {Math.round(video.duration / 60)}:{String(Math.round(video.duration % 60)).padStart(2, '0')}
-                    </span>
+                    {/* The duration is now displayed using the smart `formattedDuration` variable */}
+                    {formattedDuration && (
+                        <span className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+                            {formattedDuration}
+                        </span>
+                    )}
                 </div>
             </Link>
             <div className="mt-2 flex items-start space-x-3">
                 <Link to={isChannelLinkable ? `/channel/${video.owner.username}` : '#'} onClick={handleChannelClick} className="flex-shrink-0 mt-1">
                     <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600">
                         <img 
-                            src={avatarUrl || placeholderAvatar} // Use the new robust variable
+                            src={avatarUrl || placeholderAvatar}
                             alt={channelName}
                             className="w-full h-full object-cover" 
                         />

@@ -18,14 +18,6 @@ const HistoryVideoCard = ({ video, onRemove }) => {
         avatarUrl = avatarUrl.replace('http://', 'https://');
     }
 
-    // Use fallback values for essential video properties
-    const videoTitle = video.title || "Untitled Video";
-    const videoDescription = video.description || "No description available.";
-    const thumbnailUrl = video.thumbnail || placeholderThumbnail;
-    const views = formatCompactNumber(video.views || 0);
-    const time = timeSince(video.createdAt || new Date());
-    const username = video.owner?.username || "Unknown User";
-
     return (
         <div className="relative group flex items-start w-full gap-4 p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800">
             <Link to={`/watch/${video._id}`} className="flex items-start w-full gap-4">
@@ -45,8 +37,8 @@ const HistoryVideoCard = ({ video, onRemove }) => {
             
             <button
                 onClick={(e) => {
-                    e.stopPropagation(); // Prevent link navigation
-                    onRemove(video._id); // This will now correctly call the function from the parent
+                    e.stopPropagation();
+                    onRemove(video._id);
                 }}
                 className="absolute top-2 right-2 p-1 rounded-full text-gray-500 dark:text-gray-400 bg-white/50 dark:bg-black/50 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity"
                 title="Remove from history"
@@ -62,6 +54,8 @@ function HistoryPage() {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    // We'll use a state to trigger a re-fetch when an item is deleted.
+    const [lastUpdated, setLastUpdated] = useState(Date.now());
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -83,19 +77,21 @@ function HistoryPage() {
             }
         };
         fetchHistory();
-    }, []);
+    }, [lastUpdated]); // Re-fetch whenever 'lastUpdated' changes
 
     const handleRemoveFromHistory = async (videoId) => {
-        // Optimistically remove the video from the UI
+        const originalHistory = [...history];
         setHistory(prevHistory => prevHistory.filter(video => video._id !== videoId));
         try {
             await axiosClient.delete(`/users/history/${videoId}`);
             toast.success("Removed from watch history");
+            setLastUpdated(Date.now()); // Trigger a re-fetch to confirm
         } catch (err) {
             toast.error("Failed to remove video from history.");
-            // In a real app, you might want to re-fetch the history here to revert the UI on failure
+            setHistory(originalHistory); // Revert the UI on failure
         }
     };
+
 
     if (loading) { return <div className="text-center p-8 text-xl font-medium">Loading your history...</div>; }
     if (error) { return <div className="text-center p-8 text-red-500 bg-red-100 dark:bg-red-900 dark:text-red-300 rounded-lg max-w-lg mx-auto mt-10">{error}</div>; }
@@ -107,7 +103,6 @@ function HistoryPage() {
             </h1>
             <div className="space-y-3 sm:space-y-6">
             {history.length > 0 ? (
-                    // --- 2. THE SECOND FIX: Pass the 'onRemove' prop to each card ---
                     history.map(video => <HistoryVideoCard key={video._id} video={video} onRemove={handleRemoveFromHistory} />)
                 ) : (
                     <div className="text-center py-16 rounded-lg bg-gray-100 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-700">

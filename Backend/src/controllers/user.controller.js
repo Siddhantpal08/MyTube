@@ -205,65 +205,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, channel[0], "User channel profile fetched successfully"));
 });
 
-
-const getWatchHistory = asyncHandler(async (req, res) => {
-    // 1. Fetch the user's watchHistory field directly and reverse it for chronological order.
-    // We use .select() for efficiency.
-    const user = await User.findById(req.user._id).select("watchHistory");
-
-    // If the user document is not found or watchHistory is empty, return an empty array early.
-    if (!user || user.watchHistory.length === 0) {
-        return res.status(200).json(new ApiResponse(200, [], "Watch history is empty"));
-    }
-
-    // 2. Aggregate pipeline using the reversed history array.
-    // We must respect the order of the watchHistory array, so we cannot just use a simple $match.
-    const historyVideos = await User.aggregate([
-        { $match: { _id: new mongoose.Types.ObjectId(req.user._id) } },
-        {
-            $project: {
-                watchHistory: { $slice: ["$watchHistory", 20] } // Limit to the last 20 for performance (adjust as needed)
-            }
-        },
-        {
-            $lookup: {
-                from: "videos",
-                localField: "watchHistory",
-                foreignField: "_id",
-                as: "videos"
-            }
-        },
-        { $unwind: "$videos" }, // Deconstructs the videos array
-        {
-            $lookup: {
-                from: "users",
-                localField: "videos.owner",
-                foreignField: "_id",
-                as: "ownerDetails",
-                pipeline: [{ $project: { fullName: 1, username: 1, avatar: 1 } }]
-            }
-        },
-        {
-            $addFields: {
-                "videos.owner": { $first: "$ownerDetails" }
-            }
-        },
-        {
-            $project: {
-                videos: 1,
-            }
-        }
-    ]);
-
-    // Reorder the videos to match the original watchHistory sequence (most recent first)
-    const orderedHistory = user.watchHistory
-        .map(historyId => historyVideos.find(item => item.videos._id.equals(historyId))?.videos)
-        .filter(Boolean) // Remove any null/undefined results if a video was deleted
-        .reverse(); // Reverse to display most recent first
-
-    return res.status(200).json(new ApiResponse(200, orderedHistory, "Watch history fetched successfully"));
-});
-
 const updateAccountDetails = asyncHandler(async (req, res) => {
     const { fullName, email } = req.body;
     if (!fullName || !email) throw new ApiError(400, "All fields are required");
@@ -431,6 +372,27 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "User account and all associated data deleted successfully"));
 });
 
+// --- THIS FUNCTION IS REPLACED ---
+const getWatchHistory = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id).populate({
+        path: "watchHistory",
+        populate: {
+            path: "owner",
+            select: "username fullName avatar"
+        }
+    });
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    // The watchHistory is already sorted from newest to oldest by how you add to it.
+    // No need to reverse it here.
+    return res.status(200).json(new ApiResponse(200, user.watchHistory, "Watch history fetched successfully"));
+});
+
+
+// --- THIS IS THE NEW FUNCTION ---
 const removeVideoFromHistory = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
 
@@ -440,12 +402,13 @@ const removeVideoFromHistory = asyncHandler(async (req, res) => {
 
     await User.findByIdAndUpdate(
         req.user._id,
-        // Use the $pull operator to remove the specific videoId from the array
         { $pull: { watchHistory: videoId } }
     );
 
-    return res.status(200).json(new ApiResponse(200, {}, "Video removed from history successfully"));
+    return res.status(200).json(new ApiResponse(200, {}, "Video removed from watch history successfully"));
 });
+
+
 
 // --- THE FINAL, COMPLETE EXPORT STATEMENT ---
 export { 

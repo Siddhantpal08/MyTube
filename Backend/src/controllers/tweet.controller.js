@@ -5,16 +5,11 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Subscription } from "../models/subscription.model.js";
+import { Like } from "../models/like.model.js";
 
-/**
- * Reusable aggregation pipeline to fetch, populate, and format tweets.
- * Ensures fields like likesCount, owner details, and isLiked status are included.
- * @param {object} matchCondition - MongoDB $match object (e.g., { parentTweet: null })
- * @param {string | null} userId - ID of the currently logged-in user (optional)
- * @returns {Array} MongoDB aggregation pipeline stages
- */
 const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
     const loggedInUserId = userId ? new mongoose.Types.ObjectId(userId) : null;
+
     const pipeline = [
         { $match: matchCondition },
         { $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" } },
@@ -35,7 +30,9 @@ const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
             }
         },
         { $project: { likes: 0, replies: 0 } },
-        { $sort: { createdAt: -1 } } //  <-- THE FIX IS HERE
+        // --- THIS IS THE FIX ---
+        // We now sort by the original, reliable 'createdAt' field.
+        { $sort: { createdAt: -1 } } 
     ];
     return pipeline;
 };
@@ -48,8 +45,6 @@ const getAllTweets = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
-// In src/controllers/tweet.controller.js
-
 const getFeedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     
@@ -57,7 +52,7 @@ const getFeedTweets = asyncHandler(async (req, res) => {
     const subscribedChannelIds = subscriptions.map(sub => sub.channel);
     
     const channelIdsWithDuplicates = [...subscribedChannelIds, req.user._id];
-    const channelIdsToFetch = [...new Set(channelIdsWithDuplicates)];
+    const channelIdsToFetch = [...new Set(channelIdsWithDuplicates.map(id => id.toString()))].map(id => new mongoose.Types.ObjectId(id));
 
     const pipeline = getTweetsAggregatePipeline(
         { 
@@ -69,9 +64,7 @@ const getFeedTweets = asyncHandler(async (req, res) => {
 
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
-
-    // --- TEMPORARY TEST LINE ---
-    return res.status(200).json(new ApiResponse(200, result, "DEPLOYMENT TEST SUCCESSFUL - VERSION 3"));
+    return res.status(200).json(new ApiResponse(200, result, "User feed fetched successfully"));
 });
 
 const createTweet = asyncHandler(async (req, res) => {
@@ -93,11 +86,8 @@ const createTweet = asyncHandler(async (req, res) => {
         parentTweet: parentTweetId || null
     });
     
-    // We need to get the full owner object for the optimistic update
     const populatedTweet = await Tweet.findById(tweet._id).populate("owner", "username fullName avatar").lean();
 
-    // --- SECOND FIX IS HERE ---
-    // Manually add the missing fields that the aggregation pipeline would normally add
     const createdTweet = {
         ...populatedTweet,
         likesCount: 0,

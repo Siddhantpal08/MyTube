@@ -431,6 +431,21 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "User account and all associated data deleted successfully"));
 });
 
+const removeVideoFromHistory = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid Video ID");
+    }
+
+    await User.findByIdAndUpdate(
+        req.user._id,
+        // Use the $pull operator to remove the specific videoId from the array
+        { $pull: { watchHistory: videoId } }
+    );
+
+    return res.status(200).json(new ApiResponse(200, {}, "Video removed from history successfully"));
+});
 
 // --- THE FINAL, COMPLETE EXPORT STATEMENT ---
 export { 
@@ -450,4 +465,5 @@ export {
     resetPassword,
     updateUserAbout,
     deleteUserAccount,
+    removeVideoFromHistory,
 };

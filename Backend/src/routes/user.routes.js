@@ -15,7 +15,8 @@ import {
     forgotPassword,
     resetPassword,
     updateUserAbout,
-    deleteUserAccount
+    deleteUserAccount,
+    removeVideoFromHistory,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT, verifyJWTAndSetUser } from "../middlewares/auth.middleware.js";
@@ -49,5 +50,6 @@ router.route("/about").patch(updateUserAbout); // Add the new route
 router.route("/avatar").patch(upload.single("avatar"), updateUserAvatar);
 router.route("/cover-image").patch(upload.single("coverImage"), updateUserCoverImage);
 router.route("/history").get(getWatchHistory);
+router.route("/history/:videoId").delete(removeVideoFromHistory);
 
 export default router;

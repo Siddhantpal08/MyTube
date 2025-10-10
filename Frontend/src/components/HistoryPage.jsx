@@ -27,10 +27,11 @@ const HistoryVideoCard = ({ video }) => {
     const username = video.owner?.username || "Unknown User";
 
     return (
-        <Link 
+        <div className="relative group flex items-start w-full gap-4 p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <Link 
             to={`/watch/${video._id}`} 
             className="flex items-start w-full gap-4 group p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
+            >
             <div className="w-1/3 max-w-xs aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-gray-200 dark:bg-gray-700">
                 <img 
                     src={thumbnailUrl} 
@@ -54,7 +55,20 @@ const HistoryVideoCard = ({ video }) => {
                     {views} views • {time}
                 </p>
             </div>
-        </Link>
+            </Link>
+            {/* --- NEW: Delete Button --- */}
+            <button
+            onClick={(e) => {
+                e.preventDefault(); // Prevent the Link from navigating
+                e.stopPropagation();
+                onRemove(video._id);
+            }}
+            className="absolute top-2 right-2 p-1 rounded-full text-gray-500 dark:text-gray-400 bg-white/50 dark:bg-black/50 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity"
+            title="Remove from history"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+    </div>
     );
 };
 
@@ -98,6 +112,18 @@ function HistoryPage() {
 
         fetchHistory();
     }, []);
+
+    const handleRemoveFromHistory = async (videoId) => {
+        // Optimistically remove the video from the UI
+        setHistory(prevHistory => prevHistory.filter(video => video._id !== videoId));
+        try {
+            await axiosClient.delete(`/users/history/${videoId}`);
+            toast.success("Removed from watch history");
+        } catch (err) {
+            toast.error("Failed to remove video from history.");
+            // In a real app, you might want to re-fetch the history or add the video back to the list on failure
+        }
+    };
 
     if (loading) {
         return <div className="text-center p-8 text-xl font-medium">Loading your history...</div>;

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import VideoCard from '../components/VideoCard';
 import SkeletonCard from '../components/SkeletonCard';
-import useYouTubeInfiniteScroll from '../hooks/useYouTubeInfiniteScroll'; // Assuming the hook is in a 'hooks' folder
+import useYouTubeInfiniteScroll from '../components/UseYoutubeInfiniteScroll'; // Assuming the hook is in a 'hooks' folder
 
 function SearchResults() {
     const [searchParams] = useSearchParams();

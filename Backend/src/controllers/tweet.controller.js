@@ -9,8 +9,7 @@ import { Like } from "../models/like.model.js";
 
 const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
     const loggedInUserId = userId ? new mongoose.Types.ObjectId(userId) : null;
-
-    const pipeline = [
+    return [
         { $match: matchCondition },
         { $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" } },
         { $lookup: { from: "users", localField: "owner", foreignField: "_id", as: "owner", pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }] } },
@@ -20,50 +19,48 @@ const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
                 likesCount: { $size: "$likes" },
                 replyCount: { $size: "$replies" },
                 owner: { $first: "$owner" },
-                // --- THIS IS THE FINAL FIX ---
-                isLiked: {
-                    $cond: {
-                        // First, check if there IS a loggedInUserId
-                        if: loggedInUserId, 
-                        // If yes, then check if it's in the likes array
-                        then: { $in: [loggedInUserId, "$likes.likedBy"] },
-                        // If no, isLiked is automatically false
-                        else: false
-                    }
-                }
+                isLiked: { $cond: { if: { $in: [loggedInUserId, "$likes.likedBy"] }, then: true, else: false } }
             }
         },
         { $project: { likes: 0, replies: 0 } },
-        { $sort: { createdAt: -1 } } 
+        { $sort: { createdAt: -1 } }
     ];
-    return pipeline;
 };
-// Get all public tweets
+
 const getAllTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
-    const pipeline = getTweetsAggregatePipeline({ parentTweet: { $exists: false } }, req.user?._id);
+    // --- FINAL FIX ---
+    // This now correctly finds all top-level tweets
+    const pipeline = getTweetsAggregatePipeline(
+        { $or: [{ parentTweet: { $exists: false } }, { parentTweet: null }] },
+        req.user?._id
+    );
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
-    return res.status(200).json(new ApiResponse(200, result, "Tweets fetched successfully"));
+    return res.status(200).json(new ApiResponse(200, result, "All tweets fetched successfully"));
 });
 
-// Get personalized feed for a logged-in user
 const getFeedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
     const subscribedChannelIds = subscriptions.map(sub => sub.channel);
-    
-    // --- FINAL FIX IS HERE ---
-    // Safely create a unique list of ObjectIDs to query
     const channelIdsToFetch = [...new Set([req.user._id, ...subscribedChannelIds].map(id => id.toString()))].map(id => new mongoose.Types.ObjectId(id));
 
-    const pipeline = getTweetsAggregatePipeline({ owner: { $in: channelIdsToFetch }, parentTweet: { $exists: false } }, req.user._id);
+    // --- FINAL FIX ---
+    // This also now correctly finds all top-level tweets for the user's feed
+    const pipeline = getTweetsAggregatePipeline(
+        { 
+            owner: { $in: channelIdsToFetch },
+            $or: [{ parentTweet: { $exists: false } }, { parentTweet: null }]
+        }, 
+        req.user._id
+    );
+
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
     return res.status(200).json(new ApiResponse(200, result, "User feed fetched successfully"));
 });
 
-// Create a new tweet or reply
 const createTweet = asyncHandler(async (req, res) => {
     const { content, parentTweetId } = req.body;
     if (!content?.trim()) throw new ApiError(400, "Content is required");
@@ -80,9 +77,6 @@ const createTweet = asyncHandler(async (req, res) => {
     const tweet = await Tweet.create({ content, owner: req.user._id, parentTweet: parentTweetId || null });
     if (!tweet) throw new ApiError(500, "Failed to create tweet in the database.");
     
-    // --- FINAL FIX IS HERE ---
-    // Use an aggregation to get the newly created tweet with all necessary fields
-    // This ensures the data structure matches the feed, making the instant update work
     const createdTweetPipeline = getTweetsAggregatePipeline({ _id: tweet._id }, req.user._id);
     const createdTweet = await Tweet.aggregate(createdTweetPipeline);
 

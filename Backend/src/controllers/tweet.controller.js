@@ -15,16 +15,11 @@ import { Subscription } from "../models/subscription.model.js";
  */
 const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
     const loggedInUserId = userId ? new mongoose.Types.ObjectId(userId) : null;
-
     const pipeline = [
         { $match: matchCondition },
-        
-        // Lookup and Populate stages (unchanged)
         { $lookup: { from: "likes", localField: "_id", foreignField: "tweet", as: "likes" } },
         { $lookup: { from: "users", localField: "owner", foreignField: "_id", as: "owner", pipeline: [{ $project: { username: 1, fullName: 1, avatar: 1 } }] } },
         { $lookup: { from: "tweets", localField: "_id", foreignField: "parentTweet", as: "replies" } },
-        
-        // Add computed fields
         {
             $addFields: {
                 likesCount: { $size: "$likes" },
@@ -36,22 +31,14 @@ const getTweetsAggregatePipeline = (matchCondition = {}, userId = null) => {
                         then: false,
                         else: { $in: [loggedInUserId, "$likes.likedBy"] }
                     }
-                },
-                // CRITICAL FIX: Ensure 'createdAt' is treated as a true Date object
-                createdAtDate: { $toDate: "$createdAt" }
+                }
             }
         },
-        
-        // Final Projection and Sorting
         { $project: { likes: 0, replies: 0 } },
-        // Use the newly ensured date field for sorting
-        { $sort: { createdAtDate: -1 } } 
+        { $sort: { createdAt: -1 } } //  <-- THE FIX IS HERE
     ];
     return pipeline;
 };
-
-// --- CONTROLLER FUNCTIONS ---
-// (No changes to the following functions, as they call the corrected helper)
 
 const getAllTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
@@ -96,7 +83,6 @@ const createTweet = asyncHandler(async (req, res) => {
         if (!isValidObjectId(parentTweetId)) throw new ApiError(400, "Invalid parent tweet ID");
         const parentTweet = await Tweet.findById(parentTweetId);
         if (!parentTweet) throw new ApiError(404, "Parent tweet not found");
-        
         if (parentTweet.owner.toString() === req.user._id.toString()) {
             throw new ApiError(403, "You cannot reply to your own post.");
         }
@@ -108,7 +94,18 @@ const createTweet = asyncHandler(async (req, res) => {
         parentTweet: parentTweetId || null
     });
     
-    const createdTweet = await Tweet.findById(tweet._id).populate("owner", "username fullName avatar");
+    // We need to get the full owner object for the optimistic update
+    const populatedTweet = await Tweet.findById(tweet._id).populate("owner", "username fullName avatar").lean();
+
+    // --- SECOND FIX IS HERE ---
+    // Manually add the missing fields that the aggregation pipeline would normally add
+    const createdTweet = {
+        ...populatedTweet,
+        likesCount: 0,
+        replyCount: 0,
+        isLiked: false,
+    };
+    
     return res.status(201).json(new ApiResponse(201, createdTweet, "Tweet created successfully"));
 });
 

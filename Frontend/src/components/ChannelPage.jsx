@@ -123,12 +123,14 @@ function ChannelPage() {
             </div>
             
             {/* --- Tab Content (FIXED LAYOUT) --- */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
                 {activeTab === 'videos' && (
-                    <div className="py-4 sm:py-6">
+                    <>
                         {videos.length > 0 ? (
-                            // CRITICAL FIX: Use an aggressive grid template to force wrapping and contain items
-                            <div className="grid grid-cols-fluid gap-x-4 gap-y-8">
+                            // --- THIS IS THE FIX ---
+                            // We use a responsive grid layout with defined gaps.
+                            // Each VideoCard will now properly align within this grid.
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
                                 {videos.map(video => <VideoCard key={video._id} video={video} />)}
                             </div>
                         ) : (
@@ -136,9 +138,8 @@ function ChannelPage() {
                                 <h2 className="text-xl font-semibold">This channel hasn't uploaded any videos.</h2>
                             </div>
                         )}
-                    </div>
+                    </>
                 )}
-
                 {activeTab === 'about' && <ChannelAboutTab channel={channel} />}
             </div>
         </div>

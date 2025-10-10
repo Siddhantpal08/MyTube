@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://mytube-backend-production-4b33.up.railway.app/api/v1/';
+const API_BASE_URL = 'https://mytube-8d30.onrender.com/api/v1/';
 
 
 const axiosClient = axios.create({

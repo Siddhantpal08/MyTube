@@ -92,7 +92,11 @@ function CommentsSection({ videoId }) {
             {isAuthenticated ? (
                 <form onSubmit={handleAddComment} className="flex items-start space-x-4 mb-8">
                     {/* Proactive Fix: Use user?.avatar?.url to match AuthContext structure */}
-                    <img src={user?.avatar?.url || placeholderAvatar} alt="your avatar" className="w-10 h-10 rounded-full object-cover" />
+                    <img 
+                        src={user?.avatar?.url || placeholderAvatar} // Use the correct nested .url property
+                        alt="your avatar" 
+                        className="w-10 h-10 rounded-full object-cover" 
+                    />
                     <textarea 
                         value={newComment} 
                         onChange={(e) => setNewComment(e.target.value)} 

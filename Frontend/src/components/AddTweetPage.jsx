@@ -24,18 +24,14 @@ function AddTweetPage() {
         const toastId = toast.loading("Publishing your post...");
 
         try {
-            // The backend returns the newly created tweet object in the response
             const response = await axiosClient.post('/tweets', { content });
-            toast.success("Post published successfully!", { id: toastId });
+            toast.success("Post published!", { id: toastId });
             
-            // --- THIS IS THE FIX ---
-            // Navigate back to the community page and pass the new tweet in the state.
-            // This allows for an instant "optimistic" update without a full page reload.
+            // This is the crucial step: pass the new tweet back to the community page
             navigate('/community', { state: { newTweet: response.data.data } }); 
 
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to publish post.", { id: toastId });
-            console.error("Failed to add tweet:", error);
         } finally {
             setLoading(false);
         }

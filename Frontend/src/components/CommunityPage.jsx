@@ -26,9 +26,7 @@ function CommunityPage() {
         : "There are no posts yet. Be the first to share something!";
 
     
-    // --- EFFECT #1: For fetching tweets on load and when the tab changes ---
-    useEffect(() => {
-        const fetchTweets = async () => {
+        const fetchTweets = useCallback(async () => {
             setLoading(true);
             setError(null);
             const endpoint = (feedType === 'subscribed' && isAuthenticated) ? '/tweets/feed' : '/tweets';
@@ -42,21 +40,22 @@ function CommunityPage() {
             } finally {
                 setLoading(false);
             }
-        };
-
-        fetchTweets();
-    }, [feedType, isAuthenticated]); // This effect no longer depends on location.state
-
-    // --- EFFECT #2: For handling the optimistic update ---
-    useEffect(() => {
-        if (location.state?.newTweet) {
-            // Add the new tweet from the previous page to the top of the list
-            setTweets(prevTweets => [location.state.newTweet, ...prevTweets]);
-            
-            // Clear the location state to prevent re-adding the tweet on a page refresh
-            navigate(location.pathname, { replace: true, state: null });
-        }
-    }, [location.state, navigate]);
+        }, [feedType, isAuthenticated]);
+    
+        // This effect runs the fetchTweets function when the component loads or the tab changes
+        useEffect(() => {
+            fetchTweets();
+        }, [fetchTweets]);
+    
+        // --- EFFECT #2: For the optimistic update from AddTweetPage ---
+        useEffect(() => {
+            if (location.state?.newTweet) {
+                // Add the new tweet to the top of the current list
+                setTweets(prevTweets => [location.state.newTweet, ...prevTweets]);
+                // Clear the location state to prevent this from running again on refresh
+                navigate(location.pathname, { replace: true, state: null });
+            }
+        }, [location.state, navigate]);
 
     const handleDeleteTweet = async (tweetId) => {
         // Optimistically remove the tweet from the UI

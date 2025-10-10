@@ -56,10 +56,7 @@ const getFeedTweets = asyncHandler(async (req, res) => {
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
     const subscribedChannelIds = subscriptions.map(sub => sub.channel);
     
-    // --- THE FINAL FIX ---
-    // Create an array with potential duplicates
     const channelIdsWithDuplicates = [...subscribedChannelIds, req.user._id];
-    // Use a Set to automatically remove any duplicates, then convert back to an array
     const channelIdsToFetch = [...new Set(channelIdsWithDuplicates)];
 
     const pipeline = getTweetsAggregatePipeline(
@@ -72,7 +69,9 @@ const getFeedTweets = asyncHandler(async (req, res) => {
 
     const tweetsAggregate = Tweet.aggregate(pipeline);
     const result = await Tweet.aggregatePaginate(tweetsAggregate, { page, limit });
-    return res.status(200).json(new ApiResponse(200, result, "User feed fetched successfully"));
+
+    // --- TEMPORARY TEST LINE ---
+    return res.status(200).json(new ApiResponse(200, result, "DEPLOYMENT TEST SUCCESSFUL - VERSION 3"));
 });
 
 const createTweet = asyncHandler(async (req, res) => {

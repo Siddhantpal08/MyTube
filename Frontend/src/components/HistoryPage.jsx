@@ -7,7 +7,7 @@ import { timeSince, formatCompactNumber, placeholderAvatar } from '../utils/form
 const placeholderThumbnail = 'https://via.placeholder.com/320x180?text=Video+Unavailable'; 
 
 // --- HistoryVideoCard Component (with Fallback Enhancements) ---
-const HistoryVideoCard = ({ video }) => {
+const HistoryVideoCard = ({ video, onRemove }) => {
     // Robustly handle avatar URL, whether it's a direct string or an object
     let avatarUrl = typeof video.owner?.avatar === 'string' 
         ? video.owner.avatar 
@@ -27,9 +27,7 @@ const HistoryVideoCard = ({ video }) => {
     const username = video.owner?.username || "Unknown User";
 
     return (
-        // The outer div is now the container with relative positioning
         <div className="relative group flex items-start w-full gap-4 p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800">
-            {/* The Link now only wraps the content, not the delete button */}
             <Link to={`/watch/${video._id}`} className="flex items-start w-full gap-4">
                 <div className="w-1/3 max-w-xs aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-gray-200 dark:bg-gray-700">
                     <img src={video.thumbnail || placeholderThumbnail} alt={video.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"/>
@@ -45,10 +43,9 @@ const HistoryVideoCard = ({ video }) => {
                 </div>
             </Link>
             
-            {/* The Delete button is now a direct child of the main div */}
             <button
                 onClick={(e) => {
-                    e.stopPropagation(); // Stop event from bubbling up
+                    e.stopPropagation(); // Prevent link navigation
                     onRemove(video._id); // This will now correctly call the function from the parent
                 }}
                 className="absolute top-2 right-2 p-1 rounded-full text-gray-500 dark:text-gray-400 bg-white/50 dark:bg-black/50 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity"
@@ -109,7 +106,7 @@ function HistoryPage() {
                 Watch History
             </h1>
             <div className="space-y-3 sm:space-y-6">
-                {history.length > 0 ? (
+            {history.length > 0 ? (
                     // --- 2. THE SECOND FIX: Pass the 'onRemove' prop to each card ---
                     history.map(video => <HistoryVideoCard key={video._id} video={video} onRemove={handleRemoveFromHistory} />)
                 ) : (

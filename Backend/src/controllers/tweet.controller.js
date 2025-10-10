@@ -64,17 +64,20 @@ const getAllTweets = asyncHandler(async (req, res) => {
 const getFeedTweets = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     
+    // Find all channels the user subscribes to
     const subscriptions = await Subscription.find({ subscriber: req.user._id });
     const subscribedChannelIds = subscriptions.map(sub => sub.channel);
     
+    // --- THIS IS THE FIX ---
+    // Create a new array that includes both the subscribed channels AND the user's own ID
     const channelIdsToFetch = [
         ...subscribedChannelIds, 
-        req.user._id 
+        req.user._id // Add user's own ID to the list
     ];
 
     const pipeline = getTweetsAggregatePipeline(
         { 
-            owner: { $in: channelIdsToFetch },
+            owner: { $in: channelIdsToFetch }, // Use the new, combined list
             parentTweet: { $exists: false }
         }, 
         req.user._id

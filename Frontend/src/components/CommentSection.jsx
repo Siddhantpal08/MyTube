@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom'; // Added missing import
+import { Link } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
 import axiosClient from '../Api/axiosClient';
 import toast from 'react-hot-toast';
 import { formatCompactNumber, placeholderAvatar, timeSince } from '../utils/formatters';
-import ConfirmationModal from './ConfirmationModel'; // Assuming you have this component
 import CommentCard from './CommentCard';
 
-
-// --- The main CommentsSection component ---
 function CommentsSection({ videoId }) {
     const { isAuthenticated, user } = useAuth();
     const [comments, setComments] = useState([]);
@@ -17,8 +14,6 @@ function CommentsSection({ videoId }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isPosting, setIsPosting] = useState(false);
-    
-    // Pagination state (simplified)
     const [hasNextPage, setHasNextPage] = useState(false);
     const [nextPage, setNextPage] = useState(2);
 
@@ -26,21 +21,13 @@ function CommentsSection({ videoId }) {
         setLoading(page === 1);
         setError(null);
         try {
-            // This single endpoint is smart enough to handle both internal and external videos
             const response = await axiosClient.get(`/comments/${videoId}?page=${page}&limit=10`);
             const data = response.data.data;
-            
             const allComments = data.comments || [];
-            if (page > 1) {
-                setComments(prev => [...prev, ...allComments]);
-            } else {
-                setComments(allComments);
-            }
-
+            setComments(prev => (page > 1 ? [...prev, ...allComments] : allComments));
             setTotalComments(data.totalComments || 0);
             setHasNextPage(data.hasNextPage || false);
             setNextPage(data.nextPage || page + 1);
-
         } catch (err) {
             setError("Could not load comments.");
             console.error(err);
@@ -50,7 +37,7 @@ function CommentsSection({ videoId }) {
     }, [videoId]);
 
     useEffect(() => {
-        fetchComments(1); // Fetch the first page of comments when the component loads
+        fetchComments(1);
     }, [fetchComments]);
 
     const handleAddComment = async (e) => {
@@ -58,12 +45,8 @@ function CommentsSection({ videoId }) {
         if (!newComment.trim()) return;
         setIsPosting(true);
         try {
-            // The backend is smart enough to know if it's an internal or external video
             const response = await axiosClient.post(`/comments/${videoId}`, { content: newComment });
-            const createdComment = response.data.data;
-
-            // Add the new comment to the top of the list instantly
-            setComments(prev => [createdComment, ...prev]);
+            setComments(prev => [response.data.data, ...prev]);
             setTotalComments(prev => prev + 1);
             setNewComment("");
             toast.success("Your comment was posted!");
@@ -80,7 +63,7 @@ function CommentsSection({ videoId }) {
     };
 
     const onCommentUpdated = (updatedComment) => {
-        setComments(prev => prev.map(c => c._id === updatedComment._id ? updatedComment : c));
+        setComments(prev => prev.map(c => (c._id === updatedComment._id ? updatedComment : c)));
     };
 
     if (loading) return <p className="text-center text-gray-500 dark:text-gray-400 p-4">Loading comments...</p>;
@@ -91,9 +74,9 @@ function CommentsSection({ videoId }) {
             
             {isAuthenticated ? (
                 <form onSubmit={handleAddComment} className="flex items-start space-x-4 mb-8">
-                    {/* Proactive Fix: Use user?.avatar?.url to match AuthContext structure */}
+                    {/* --- THIS IS THE FINAL FIX --- */}
                     <img 
-                        src={user?.avatar?.url || placeholderAvatar} // Use the correct nested .url property
+                        src={user?.avatar || placeholderAvatar} 
                         alt="your avatar" 
                         className="w-10 h-10 rounded-full object-cover" 
                     />
